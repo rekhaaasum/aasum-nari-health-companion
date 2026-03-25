@@ -305,12 +305,14 @@ async function processUserSpeech(text) {
       body: JSON.stringify({
         system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents: conversationHistory,
-        generationConfig: { maxOutputTokens: 600, temperature: 0.8 }
+        generationConfig: { maxOutputTokens: 600, temperature: 0.8, thinkingConfig: { thinkingBudget: 0 } }
       })
     });
     if (!res.ok) { const err = await res.json(); throw new Error(err.error?.message || 'API error'); }
     const data = await res.json();
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Something went wrong, please try again.';
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const textPart = parts.find(p => p.text && !p.thought);
+    const reply = textPart?.text || parts.find(p => p.text)?.text || "Something went wrong, please try again.";
     conversationHistory.push({ role: 'model', parts: [{ text: reply }] });
     if (showText) showTranscript(reply, 'ai');
     speakResponse(reply);
@@ -321,19 +323,33 @@ async function processUserSpeech(text) {
   }
 }
 
+function pickFemaleVoice(voices, lang) {
+  const femaleNames = ['female','woman','zira','heera','priya','raveena','aditi','divya','veena','moira','samantha','karen','victoria','susan','neerja'];
+  const langMap = { en: 'en-IN', te: 'te-IN', ur: 'ur-IN' };
+  const target = langMap[lang] || 'en-IN';
+  return voices.find(v => v.lang === target && femaleNames.some(n => v.name.toLowerCase().includes(n)))
+    || voices.find(v => v.lang === target)
+    || voices.find(v => v.lang.startsWith('en') && femaleNames.some(n => v.name.toLowerCase().includes(n)))
+    || voices.find(v => v.lang.startsWith('en'))
+    || voices[0];
+}
+
 function speakResponse(text) {
   window.speechSynthesis.cancel();
   const clean = text.replace(/\*+/g, '').replace(/#{1,6}\s/g, '').replace(/\n+/g, ' ');
   const utt = new SpeechSynthesisUtterance(clean);
-  utt.rate = slowMode ? 0.75 : 0.9; utt.pitch = 1.05; utt.volume = 1;
-  const voices = window.speechSynthesis.getVoices();
-  const langMap = { en: 'en-IN', te: 'te-IN', ur: 'ur-IN' };
-  let voice = voices.find(v => v.lang === langMap[currentLang]) || voices.find(v => v.lang.startsWith(langMap[currentLang].split('-')[0])) || voices.find(v => v.lang.startsWith('en'));
-  if (voice) utt.voice = voice;
+  utt.rate = slowMode ? 0.75 : 0.88;
+  utt.pitch = 1.15;
+  utt.volume = 1;
+  const trySpeak = () => {
+    const v = pickFemaleVoice(window.speechSynthesis.getVoices(), currentLang);
+    if (v) utt.voice = v;
+    window.speechSynthesis.speak(utt);
+  };
   utt.onstart = () => { setOrbState('speaking'); setStatus(text.split(/[।.!?]/)[0].trim().substring(0, 57)); };
   utt.onend = () => setOrbState('idle');
   utt.onerror = () => setOrbState('idle');
-  voices.length === 0 ? (window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.speak(utt)) : window.speechSynthesis.speak(utt);
+  window.speechSynthesis.getVoices().length === 0 ? (window.speechSynthesis.onvoiceschanged = trySpeak) : trySpeak();
 }
 
 function stopSpeaking() { window.speechSynthesis.cancel(); setOrbState('idle'); }
