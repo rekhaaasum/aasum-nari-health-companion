@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAsum Nari — Voice Companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --saffron: #E8832A;
+  --saffron-light: #FDF3E7;
+  --rose: #C4567A;
+  --deep: #2D1F14;
+  --warm-white: #FEFAF5;
+  --warm-gray: #9C8C7E;
+  --warm-border: rgba(232,131,42,0.18);
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --sans: 'DM Sans', system-ui, sans-serif;
+}
+
+html, body { height: 100%; font-family: var(--sans); background: var(--warm-white); color: var(--deep); overflow: hidden; }
+
+.app { height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 24px 20px 32px; max-width: 500px; margin: 0 auto; }
+
+.top-bar { width: 100%; display: flex; align-items: center; justify-content: space-between; }
+
+.brand { display: flex; align-items: center; gap: 10px; }
+
+.brand-logo { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #E8832A, #C4567A); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+
+.brand-name { font-family: var(--serif); font-size: 20px; font-weight: 600; color: var(--deep); }
+
+.lang-pill { display: flex; gap: 3px; background: #F2EAE0; padding: 3px; border-radius: 20px; }
+
+.lang-btn { padding: 4px 12px; border: none; background: transparent; border-radius: 16px; font-family: var(--sans); font-size: 11px; font-weight: 500; cursor: pointer; color: var(--warm-gray); transition: all 0.2s; white-space: nowrap; }
+
+.lang-btn.active { background: white; color: #B5611A; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+.center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; width: 100%; }
+
+.status-text { font-family: var(--serif); font-size: 20px; font-weight: 400; color: var(--deep); text-align: center; min-height: 56px; line-height: 1.4; font-style: italic; transition: opacity 0.4s; padding: 0 16px; }
+
+.transcript-bubble { background: white; border: 1px solid var(--warm-border); border-radius: 16px; padding: 14px 18px; font-size: 14px; line-height: 1.7; color: var(--deep); width: 100%; max-height: 160px; overflow-y: auto; display: none; animation: fadeUp 0.3s ease; }
+
+.transcript-bubble.visible { display: block; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+.orb-container { position: relative; width: 180px; height: 180px; display: flex; align-items: center; justify-content: center; }
+
+.orb-ring { position: absolute; border-radius: 50%; border: 1.5px solid rgba(232,131,42,0.2); }
+.orb-ring.r1 { width: 180px; height: 180px; }
+.orb-ring.r2 { width: 148px; height: 148px; border-color: rgba(196,86,122,0.18); }
+.orb-ring.pulse { animation: ringPulse 1.8s ease-in-out infinite; }
+.orb-ring.r2.pulse { animation: ringPulse 1.8s ease-in-out infinite 0.3s; }
+
+@keyframes ringPulse { 0%, 100% { transform: scale(1); opacity: 0.4; } 50% { transform: scale(1.08); opacity: 1; } }
+
+.orb { width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(145deg, #F0A060 0%, #E8832A 40%, #C4567A 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.15s, box-shadow 0.3s; position: relative; z-index: 2; box-shadow: 0 8px 32px rgba(232,131,42,0.25); }
+
+.orb:hover { transform: scale(1.04); }
+.orb:active { transform: scale(0.97); }
+.orb.listening { box-shadow: 0 8px 40px rgba(232,131,42,0.45); animation: orbListen 1s ease-in-out infinite alternate; }
+.orb.speaking { box-shadow: 0 8px 40px rgba(196,86,122,0.4); animation: orbSpeak 0.8s ease-in-out infinite alternate; }
+.orb.thinking { animation: orbThink 1.5s ease-in-out infinite; }
+
+@keyframes orbListen { from { transform: scale(1); } to { transform: scale(1.06); } }
+@keyframes orbSpeak { from { transform: scale(1); } to { transform: scale(1.04); } }
+@keyframes orbThink { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.02); opacity: 1; } }
+
+.orb-icon { font-size: 36px; transition: all 0.3s; pointer-events: none; }
+
+.soundwave { display: flex; gap: 3px; align-items: center; height: 28px; }
+.soundwave .bar { width: 4px; background: white; border-radius: 2px; animation: wave 0.6s ease-in-out infinite alternate; opacity: 0.9; }
+.soundwave .bar:nth-child(1) { height: 8px; animation-delay: 0s; }
+.soundwave .bar:nth-child(2) { height: 18px; animation-delay: 0.1s; }
+.soundwave .bar:nth-child(3) { height: 26px; animation-delay: 0.05s; }
+.soundwave .bar:nth-child(4) { height: 18px; animation-delay: 0.15s; }
+.soundwave .bar:nth-child(5) { height: 8px; animation-delay: 0.08s; }
+@keyframes wave { from { transform: scaleY(0.4); } to { transform: scaleY(1); } }
+
+.micwave { display: flex; gap: 3px; align-items: center; height: 28px; }
+.micwave .bar { width: 4px; background: rgba(255,255,255,0.9); border-radius: 2px; animation: micAnim 0.5s ease-in-out infinite alternate; }
+.micwave .bar:nth-child(1) { height: 6px; animation-delay: 0s; }
+.micwave .bar:nth-child(2) { height: 16px; animation-delay: 0.12s; }
+.micwave .bar:nth-child(3) { height: 22px; animation-delay: 0.06s; }
+.micwave .bar:nth-child(4) { height: 16px; animation-delay: 0.18s; }
+.micwave .bar:nth-child(5) { height: 6px; animation-delay: 0.09s; }
+@keyframes micAnim { from { transform: scaleY(0.5); } to { transform: scaleY(1); } }
+
+.bottom { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+
+.hint-text { font-size: 12px; color: var(--warm-gray); text-align: center; line-height: 1.6; }
+
+.secondary-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+.ctrl-btn { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid var(--warm-border); border-radius: 20px; background: white; font-family: var(--sans); font-size: 12px; color: var(--warm-gray); cursor: pointer; transition: all 0.2s; }
+.ctrl-btn:hover { background: var(--saffron-light); border-color: var(--saffron); color: #B5611A; }
+.ctrl-btn.active { background: var(--saffron-light); border-color: var(--saffron); color: #B5611A; }
+
+.disclaimer-small { font-size: 10px; color: #BBAA99; text-align: center; line-height: 1.5; max-width: 320px; }
+
+/* Setup screen */
+.setup-screen { position: fixed; inset: 0; background: var(--warm-white); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; gap: 20px; z-index: 100; }
+.setup-screen h2 { font-family: var(--serif); font-size: 26px; font-weight: 400; color: var(--deep); text-align: center; }
+.setup-screen p { font-size: 13px; color: var(--warm-gray); text-align: center; line-height: 1.7; max-width: 360px; }
+.setup-screen a { color: var(--saffron); }
+.key-input { width: 100%; max-width: 380px; padding: 12px 16px; border: 1px solid var(--warm-border); border-radius: 12px; font-family: var(--sans); font-size: 13px; color: var(--deep); background: white; outline: none; }
+.key-input:focus { border-color: var(--saffron); }
+.key-btn { padding: 12px 32px; background: linear-gradient(135deg, #E8832A, #C4567A); border: none; border-radius: 24px; color: white; font-family: var(--sans); font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity 0.2s; }
+.key-btn:hover { opacity: 0.9; }
+
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #2D1F14; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; text-align: center; max-width: 320px; z-index: 200; }
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="setup-screen" id="setup-screen">
+  <div style="font-size:48px">🌸</div>
+  <h2>Welcome to AAsum Nari</h2>
+  <p>Enter your free Google Gemini API key to begin.<br>Get one at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> — no credit card needed.</p>
+  <input class="key-input" id="api-key-input" type="password" placeholder="Paste your Gemini API key (AIza...)" />
+  <button class="key-btn" onclick="saveKey()">Start AAsum Nari →</button>
+  <p style="font-size:11px; color:#BBAA99">Your key stays in your browser only. Never shared or stored elsewhere.</p>
+</div>
+
+<div class="app">
+  <div class="top-bar">
+    <div class="brand">
+      <div class="brand-logo">🌸</div>
+      <span class="brand-name">AAsum Nari</span>
+    </div>
+    <div class="lang-pill">
+      <button class="lang-btn active" onclick="setLang('en')" data-lang="en">English</button>
+      <button class="lang-btn" onclick="setLang('te')" data-lang="te">తెలుగు</button>
+      <button class="lang-btn" onclick="setLang('ur')" data-lang="ur">اردو</button>
+    </div>
+  </div>
+
+  <div class="center">
+    <div class="status-text" id="status-text">Aapka swagat hai — tap to speak</div>
+    <div class="orb-container">
+      <div class="orb-ring r1" id="ring1"></div>
+      <div class="orb-ring r2" id="ring2"></div>
+      <div class="orb" id="orb" onclick="handleOrbClick()">
+        <div class="orb-icon" id="orb-icon">🌺</div>
+      </div>
+    </div>
+    <div class="transcript-bubble" id="transcript"></div>
+  </div>
+
+  <div class="bottom">
+    <p class="hint-text" id="hint-text">Tap the flower to start speaking<br>It will listen, then respond in your language</p>
+    <div class="secondary-controls">
+      <button class="ctrl-btn" id="stop-btn" onclick="stopSpeaking()" style="display:none">⏹ Stop</button>
+      <button class="ctrl-btn" id="speed-btn" onclick="toggleSpeed()">🐢 Slow speech</button>
+      <button class="ctrl-btn" id="text-toggle" onclick="toggleTranscript()">💬 Show text</button>
+      <button class="ctrl-btn" onclick="resetKey()">🔑 Change key</button>
+    </div>
+    <p class="disclaimer-small">Not a doctor. For support & information only.<br>Always consult a medical professional for diagnosis.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+
+let state = 'idle';
+let recognition = null;
+let slowMode = false;
+let showText = false;
+let conversationHistory = [];
+let currentLang = 'en';
+let GEMINI_KEY = '';
+
+const LANGS = {
+  en: { tapPrompt: "Aapka swagat hai — tap to speak", listening: "Listening...", thinking: "Thinking...", hint: "Tap the flower to start speaking\nIt will listen, then respond in your language", noSpeech: "Didn't catch that. Please try again.", errorMic: "Microphone not available. Please allow access.", errorAPI: "Could not connect. Please check your API key." },
+  te: { tapPrompt: "మీకు స్వాగతం — మాట్లాడటానికి నొక్కండి", listening: "వింటున్నాను...", thinking: "ఆలోచిస్తున్నాను...", hint: "పువ్వును నొక్కి మాట్లాడండి\nమీ భాషలో జవాబు వస్తుంది", noSpeech: "వినబడలేదు. మళ్ళీ ప్రయత్నించండి.", errorMic: "మైక్రోఫోన్ అందుబాటులో లేదు.", errorAPI: "కనెక్ట్ కాలేదు." },
+  ur: { tapPrompt: "خوش آمدید — بولنے کے لیے دبائیں", listening: "سن رہی ہوں...", thinking: "سوچ رہی ہوں...", hint: "پھول کو دبائیں اور بولیں\nآپ کی زبان میں جواب آئے گا", noSpeech: "سنائی نہیں دیا۔ دوبارہ کوشش کریں۔", errorMic: "مائیکروفون دستیاب نہیں۔", errorAPI: "کنیکٹ نہیں ہو سکا۔" }
+};
+
+const SYSTEM_PROMPT = `You are AAsum Nari, a warm health companion for South Asian women navigating perimenopause. Respond with voice in mind — short, warm sentences. No bullet points, no markdown, no lists. Like a trusted older sister.
+
+LANGUAGE: Match the user's language exactly. Telugu for Telugu speakers, Urdu/Hindi for Urdu speakers, English for English speakers. Use amma, behan, didi as appropriate.
+
+STYLE: Validate feelings first, then inform. End with a gentle follow-up question.
+
+TOPICS: Hot flashes, night sweats, irregular periods, mood changes, poor sleep, brain fog, joint pain, heart palpitations. Reference turmeric, methi, flaxseeds, ghee, Ayurvedic framing.
+
+Always recommend a doctor for diagnosis. Never diagnose or prescribe.`;
+
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('aasum_gemini_key');
+  if (saved) { GEMINI_KEY = saved; document.getElementById('setup-screen').style.display = 'none'; }
+});
+
+function saveKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key || !key.startsWith('AIza')) { showToast('Please enter a valid Gemini key (starts with AIza)'); return; }
+  GEMINI_KEY = key;
+  localStorage.setItem('aasum_gemini_key', key);
+  document.getElementById('setup-screen').style.display = 'none';
+  showToast('Ready! Tap the flower to begin 🌸');
+}
+
+function resetKey() {
+  localStorage.removeItem('aasum_gemini_key');
+  GEMINI_KEY = '';
+  document.getElementById('api-key-input').value = '';
+  document.getElementById('setup-screen').style.display = 'flex';
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-lang="${lang}"]`).classList.add('active');
+  if (state === 'idle') { setStatus(LANGS[lang].tapPrompt); setHint(LANGS[lang].hint); }
+}
+
+function setStatus(text) {
+  const el = document.getElementById('status-text');
+  el.style.opacity = '0';
+  setTimeout(() => { el.textContent = text; el.style.opacity = '1'; el.dir = currentLang === 'ur' ? 'rtl' : 'ltr'; }, 200);
+}
+
+function setHint(text) { document.getElementById('hint-text').innerHTML = text.replace('\n', '<br>'); }
+
+function showToast(msg, duration = 3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function setOrbState(newState) {
+  state = newState;
+  const orb = document.getElementById('orb');
+  const icon = document.getElementById('orb-icon');
+  const r1 = document.getElementById('ring1');
+  const r2 = document.getElementById('ring2');
+  const stopBtn = document.getElementById('stop-btn');
+  orb.className = 'orb'; r1.className = 'orb-ring r1'; r2.className = 'orb-ring r2';
+
+  if (newState === 'listening') {
+    orb.classList.add('listening'); r1.classList.add('pulse'); r2.classList.add('pulse');
+    icon.innerHTML = `<div class="micwave"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>`;
+    setStatus(LANGS[currentLang].listening); stopBtn.style.display = 'none';
+  } else if (newState === 'thinking') {
+    orb.classList.add('thinking'); icon.innerHTML = '⏳'; icon.style.fontSize = '28px';
+    setStatus(LANGS[currentLang].thinking); stopBtn.style.display = 'none';
+  } else if (newState === 'speaking') {
+    orb.classList.add('speaking');
+    icon.innerHTML = `<div class="soundwave"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>`;
+    stopBtn.style.display = 'flex';
+  } else {
+    icon.innerHTML = '🌺'; icon.style.fontSize = '36px';
+    setStatus(LANGS[currentLang].tapPrompt); setHint(LANGS[currentLang].hint); stopBtn.style.display = 'none';
+  }
+}
+
+function handleOrbClick() {
+  if (state === 'listening') stopListening();
+  else if (state === 'speaking') stopSpeaking();
+  else if (state === 'idle') startListening();
+}
+
+function startListening() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { showToast("Please use Chrome for voice support."); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = { en: 'en-IN', te: 'te-IN', ur: 'ur-IN' }[currentLang] || 'en-IN';
+  recognition.continuous = false; recognition.interimResults = true;
+  recognition.onstart = () => setOrbState('listening');
+  recognition.onresult = (e) => {
+    let final = '', interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += t; else interim += t;
+    }
+    if (showText && (final || interim)) showTranscript(final || interim, 'user');
+    if (final) { recognition.stop(); processUserSpeech(final); }
+  };
+  recognition.onerror = (e) => {
+    if (e.error === 'no-speech') showToast(LANGS[currentLang].noSpeech);
+    else if (e.error === 'not-allowed') showToast(LANGS[currentLang].errorMic);
+    setOrbState('idle');
+  };
+  recognition.onend = () => { if (state === 'listening') setOrbState('idle'); };
+  try { recognition.start(); } catch(e) { showToast("Could not start microphone."); setOrbState('idle'); }
+}
+
+function stopListening() { if (recognition) recognition.stop(); setOrbState('idle'); }
+
+async function processUserSpeech(text) {
+  setOrbState('thinking');
+  conversationHistory.push({ role: 'user', parts: [{ text }] });
+  try {
+    const res = await fetch(`${GEMINI_URL}?key=${GEMINI_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: conversationHistory,
+        generationConfig: { maxOutputTokens: 600, temperature: 0.8 }
+      })
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.error?.message || 'API error'); }
+    const data = await res.json();
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Something went wrong, please try again.';
+    conversationHistory.push({ role: 'model', parts: [{ text: reply }] });
+    if (showText) showTranscript(reply, 'ai');
+    speakResponse(reply);
+  } catch(err) {
+    console.error(err);
+    showToast(err.message.includes('API_KEY') ? 'Invalid API key. Tap Change Key.' : LANGS[currentLang].errorAPI, 4000);
+    setOrbState('idle');
+  }
+}
+
+function speakResponse(text) {
+  window.speechSynthesis.cancel();
+  const clean = text.replace(/\*+/g, '').replace(/#{1,6}\s/g, '').replace(/\n+/g, ' ');
+  const utt = new SpeechSynthesisUtterance(clean);
+  utt.rate = slowMode ? 0.75 : 0.9; utt.pitch = 1.05; utt.volume = 1;
+  const voices = window.speechSynthesis.getVoices();
+  const langMap = { en: 'en-IN', te: 'te-IN', ur: 'ur-IN' };
+  let voice = voices.find(v => v.lang === langMap[currentLang]) || voices.find(v => v.lang.startsWith(langMap[currentLang].split('-')[0])) || voices.find(v => v.lang.startsWith('en'));
+  if (voice) utt.voice = voice;
+  utt.onstart = () => { setOrbState('speaking'); setStatus(text.split(/[।.!?]/)[0].trim().substring(0, 57)); };
+  utt.onend = () => setOrbState('idle');
+  utt.onerror = () => setOrbState('idle');
+  voices.length === 0 ? (window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.speak(utt)) : window.speechSynthesis.speak(utt);
+}
+
+function stopSpeaking() { window.speechSynthesis.cancel(); setOrbState('idle'); }
+
+function showTranscript(text, role) {
+  const el = document.getElementById('transcript');
+  if (!showText) return;
+  el.classList.add('visible'); el.dir = currentLang === 'ur' ? 'rtl' : 'ltr';
+  el.innerHTML = (role === 'user' ? '🙋‍♀️ ' : '🌸 ') + text;
+}
+
+function toggleSpeed() {
+  slowMode = !slowMode;
+  const btn = document.getElementById('speed-btn');
+  btn.classList.toggle('active', slowMode);
+  btn.textContent = slowMode ? '🐇 Normal speed' : '🐢 Slow speech';
+}
+
+function toggleTranscript() {
+  showText = !showText;
+  const btn = document.getElementById('text-toggle');
+  btn.classList.toggle('active', showText);
+  btn.textContent = showText ? '💬 Hide text' : '💬 Show text';
+  if (!showText) document.getElementById('transcript').classList.remove('visible');
+}
+
+window.speechSynthesis.getVoices();
+</script>
+</body>
+</html>
