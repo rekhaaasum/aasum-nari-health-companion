@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mythri — AAsum Nari Voice Companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --burgundy: #8B1A3A;
+  --burgundy-light: rgba(139,26,58,0.2);
+  --burgundy-dark: #6B1230;
+  --purple: #9B8EC4;
+  --purple-light: rgba(155,142,196,0.15);
+  --deep: #F5F5F5;
+  --lavender: #1A0510;
+  --warm-gray: rgba(245,245,245,0.6);
+  --warm-border: rgba(255,255,255,0.12);
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --sans: 'DM Sans', system-ui, sans-serif;
+}
+
+html, body {
+  height: 100%;
+  font-family: var(--sans);
+  background: linear-gradient(160deg, #3B0B24 0%, #2A0818 40%, #1A0510 100%);
+  background-attachment: fixed;
+  color: var(--deep);
+  overflow: hidden;
+}
+
+.app { height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 16px 20px 20px; max-width: 500px; margin: 0 auto; }
+
+.top-bar { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+.brand { display: flex; align-items: center; gap: 10px; }
+
+.brand-logo { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+
+.brand-name { font-family: var(--serif); font-size: 20px; font-weight: 600; color: #F5F5F5; letter-spacing: 0.02em; }
+
+.lang-pill { display: flex; gap: 3px; background: rgba(255,255,255,0.08); backdrop-filter: blur(8px); padding: 3px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.12); }
+
+.lang-btn { padding: 4px 12px; border: none; background: transparent; border-radius: 16px; font-family: var(--sans); font-size: 11px; font-weight: 500; cursor: pointer; color: rgba(245,245,245,0.6); transition: all 0.2s; white-space: nowrap; }
+
+.lang-btn.active { background: rgba(255,255,255,0.15); color: #F5F5F5; box-shadow: 0 1px 6px rgba(0,0,0,0.3); }
+
+.center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; width: 100%; }
+
+.status-text { font-family: var(--serif); font-size: 20px; font-weight: 400; color: rgba(245,245,245,0.85); text-align: center; min-height: 32px; line-height: 1.4; font-style: italic; transition: opacity 0.4s; padding: 0 16px; }
+
+.transcript-bubble { background: rgba(255,255,255,0.06); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 14px 18px; font-size: 14px; line-height: 1.7; color: rgba(245,245,245,0.9); width: 100%; max-height: 160px; overflow-y: auto; display: none; animation: fadeUp 0.3s ease; }
+
+.transcript-bubble.visible { display: block; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+.orb-container { position: relative; width: 160px; height: 160px; display: flex; align-items: center; justify-content: center; }
+
+.orb-ring { position: absolute; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.1); }
+.orb-ring.r1 { width: 160px; height: 160px; }
+.orb-ring.r2 { width: 132px; height: 132px; border-color: rgba(155,142,196,0.2); }
+.orb-ring.pulse { animation: ringPulse 1.8s ease-in-out infinite; }
+.orb-ring.r2.pulse { animation: ringPulse 1.8s ease-in-out infinite 0.3s; }
+
+@keyframes ringPulse { 0%, 100% { transform: scale(1); opacity: 0.4; } 50% { transform: scale(1.08); opacity: 1; } }
+
+.orb-glow { position: absolute; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(139,26,58,0.15) 0%, transparent 70%); animation: glowPulse 3s ease-in-out infinite; pointer-events: none; }
+@keyframes glowPulse { 0%, 100% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.15); opacity: 1; } }
+
+.orb { width: 108px; height: 108px; border-radius: 50%; background: linear-gradient(145deg, #C02860 0%, #8B1A3A 45%, #3B2060 100%); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.15s, box-shadow 0.3s; position: relative; z-index: 2; box-shadow: 0 8px 32px rgba(139,26,58,0.3); }
+
+.orb:hover { transform: scale(1.04); }
+.orb:active { transform: scale(0.97); }
+.orb.listening { box-shadow: 0 8px 40px rgba(139,26,58,0.5); animation: orbListen 1s ease-in-out infinite alternate; }
+.orb.speaking { box-shadow: 0 8px 40px rgba(74,63,107,0.5); animation: orbSpeak 0.8s ease-in-out infinite alternate; }
+.orb.thinking { animation: orbThink 1.5s ease-in-out infinite; }
+
+@keyframes orbListen { from { transform: scale(1); } to { transform: scale(1.06); } }
+@keyframes orbSpeak { from { transform: scale(1); } to { transform: scale(1.04); } }
+@keyframes orbThink { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.02); opacity: 1; } }
+
+.orb-icon { font-size: 36px; transition: all 0.3s; pointer-events: none; user-select: none; }
+
+.soundwave { display: flex; gap: 3px; align-items: center; height: 28px; }
+.soundwave .bar { width: 4px; background: white; border-radius: 2px; animation: wave 0.6s ease-in-out infinite alternate; opacity: 0.9; }
+.soundwave .bar:nth-child(1) { height: 8px; animation-delay: 0s; }
+.soundwave .bar:nth-child(2) { height: 18px; animation-delay: 0.1s; }
+.soundwave .bar:nth-child(3) { height: 26px; animation-delay: 0.05s; }
+.soundwave .bar:nth-child(4) { height: 18px; animation-delay: 0.15s; }
+.soundwave .bar:nth-child(5) { height: 8px; animation-delay: 0.08s; }
+@keyframes wave { from { transform: scaleY(0.4); } to { transform: scaleY(1); } }
+
+.micwave { display: flex; gap: 3px; align-items: center; height: 28px; }
+.micwave .bar { width: 4px; background: rgba(255,255,255,0.9); border-radius: 2px; animation: micAnim 0.5s ease-in-out infinite alternate; }
+.micwave .bar:nth-child(1) { height: 6px; animation-delay: 0s; }
+.micwave .bar:nth-child(2) { height: 16px; animation-delay: 0.12s; }
+.micwave .bar:nth-child(3) { height: 22px; animation-delay: 0.06s; }
+.micwave .bar:nth-child(4) { height: 16px; animation-delay: 0.18s; }
+.micwave .bar:nth-child(5) { height: 6px; animation-delay: 0.09s; }
+@keyframes micAnim { from { transform: scaleY(0.5); } to { transform: scaleY(1); } }
+
+.bottom { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+
+.hint-text { font-size: 12px; color: rgba(245,245,245,0.5); text-align: center; line-height: 1.6; }
+
+.secondary-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+.ctrl-btn { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; background: rgba(255,255,255,0.08); backdrop-filter: blur(8px); font-family: var(--sans); font-size: 12px; font-weight: 500; color: rgba(245,245,245,0.85); cursor: pointer; transition: all 0.2s; }
+.ctrl-btn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); color: #F5F5F5; }
+.ctrl-btn.active { background: rgba(139,26,58,0.4); border-color: rgba(139,26,58,0.6); color: #F5F5F5; }
+
+.disclaimer-small { font-size: 11px; color: rgba(245,245,245,0.5); text-align: center; line-height: 1.5; max-width: 320px; }
+
+/* Tap to hear button for iPhone */
+.tap-to-hear { display: none; padding: 12px 28px; background: linear-gradient(135deg, rgba(139,26,58,0.8), rgba(74,63,107,0.8)); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); border-radius: 24px; color: white; font-family: var(--sans); font-size: 14px; font-weight: 500; cursor: pointer; animation: fadeUp 0.3s ease; }
+.tap-to-hear.visible { display: block; }
+
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(59,11,36,0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15); color: #F5F5F5; padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; text-align: center; max-width: 320px; z-index: 200; }
+.toast.show { opacity: 1; }
+
+/* Phone entry screen */
+.phone-screen { position: fixed; inset: 0; background: linear-gradient(160deg, #3B0B24 0%, #1A0510 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; gap: 20px; z-index: 300; animation: fadeUp 0.4s ease; }
+.phone-screen .lion-wrap { width: 72px; height: 72px; border-radius: 50%; background: var(--burgundy); display: flex; align-items: center; justify-content: center; }
+.phone-screen .lion-wrap img { width: 48px; height: 48px; object-fit: contain; filter: brightness(0) invert(1); }
+.phone-screen h2 { font-family: var(--serif); font-size: 26px; font-weight: 400; color: #F5F5F5; text-align: center; line-height: 1.3; }
+.phone-screen p { font-size: 14px; color: rgba(245,245,245,0.65); text-align: center; line-height: 1.7; max-width: 340px; }
+.phone-input-wrap { width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 10px; }
+.phone-input { width: 100%; padding: 14px 16px; border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; font-family: var(--sans); font-size: 16px; color: #F5F5F5; background: rgba(255,255,255,0.08); backdrop-filter: blur(8px); outline: none; text-align: center; letter-spacing: 0.05em; }
+.phone-input:focus { border-color: rgba(255,255,255,0.4); box-shadow: 0 0 0 3px rgba(255,255,255,0.06); }
+.phone-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #8B1A3A, #4A3F6B); border: none; border-radius: 24px; color: white; font-family: var(--sans); font-size: 15px; font-weight: 500; cursor: pointer; transition: opacity 0.2s; }
+.phone-btn:hover { opacity: 0.9; }
+.phone-skip { font-size: 12px; color: rgba(245,245,245,0.5); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.phone-disclaimer { font-size: 10px; color: rgba(245,245,245,0.4); text-align: center; max-width: 280px; line-height: 1.5; }
+
+.topic-chips { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
+.topic-chip { display: flex; flex-direction: column; align-items: center; gap: 3px; background: rgba(255,255,255,0.08); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 8px 10px; cursor: pointer; transition: all 0.2s; min-width: 56px; }
+.topic-chip:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); }
+.topic-chip:active { transform: scale(0.95); }
+.topic-chip .chip-emoji { font-size: 20px; line-height: 1; }
+.topic-chip .chip-label { font-size: 11px; font-weight: 500; color: rgba(245,245,245,0.9); font-family: var(--sans); white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<!-- Phone entry screen — shown only on first visit -->
+<div class="phone-screen" id="phone-screen">
+  <div class="lion-wrap">
+    <img src="https://aasumnari.com/lion-logo.png" alt="Mythri">
+  </div>
+  <h2>Namaskaram! 🌸</h2>
+  <p>To help us improve Mythri for you, please enter your WhatsApp number to get started.</p>
+  <div class="phone-input-wrap">
+    <input class="phone-input" id="phone-input" type="tel" placeholder="Your WhatsApp number (e.g. 919876543210)" maxlength="15" />
+    <button class="phone-btn" onclick="savePhone()">Start talking to Mythri →</button>
+  </div>
+
+  <p class="phone-disclaimer">Your number is only used to improve this service for South Asian women. It is never shared or sold.</p>
+  <button onclick="checkMic()" style="background:none;border:none;color:var(--burgundy);font-size:12px;text-decoration:underline;cursor:pointer;font-family:var(--sans);">🎙️ Check if microphone works</button>
+</div>
+
+<div class="app">
+  <div class="top-bar" style="flex-direction:column;align-items:center;gap:10px;">
+    <a href="https://www.aasumnari.org" target="_blank" class="brand" style="text-decoration:none;">
+      <img src="https://aasumnari.com/lion-logo.png" alt="AAsum Nari" style="width:52px;height:52px;object-fit:contain;border-radius:50%;background:#8B1A3A;padding:5px;">
+      <span class="brand-name">AAsum Nari <span style="font-style:italic;font-size:16px;color:var(--warm-gray);">· Mythri</span></span>
+    </a>
+    <div class="lang-pill">
+      <button class="lang-btn active" onclick="setLang('en')" data-lang="en">English</button>
+      <button class="lang-btn" onclick="setLang('te')" data-lang="te">తెలుగు</button>
+      <button class="lang-btn" onclick="setLang('ur')" data-lang="ur">اردو</button>
+    </div>
+    <div id="disclaimer-inline" style="font-size:11px;color:#5A4A6A;text-align:center;padding:5px 16px;line-height:1.5;max-width:420px;background:rgba(139,26,58,0.06);border-radius:8px;width:100%;">Think of me as a knowledgeable AI friend. I provide support and info, but I can make mistakes — always consult a doctor for medical concerns.</div>
+  </div>
+
+  <div class="center">
+    <div class="status-text" id="status-text" style="min-height:32px;"></div>
+    <div class="orb-container">
+      <div class="orb-glow"></div>
+      <div class="orb-ring r1" id="ring1"></div>
+      <div class="orb-ring r2" id="ring2"></div>
+      <svg id="tap-label" style="position:absolute;top:0;left:0;width:160px;height:160px;pointer-events:none;z-index:3;" viewBox="0 0 160 160">
+        <defs>
+          <path id="upperArc" d="M 15,80 A 63,63 0 0,1 145,80" />
+        </defs>
+        <text font-family="DM Sans, system-ui, sans-serif" font-size="11" font-weight="700" fill="#800020" letter-spacing="2.5">
+          <textPath href="#upperArc" startOffset="50%" text-anchor="middle">TAP ONCE AND TALK</textPath>
+        </text>
+      </svg>
+      <div class="orb" id="orb" onclick="handleOrbClick()">
+        <div class="orb-icon" id="orb-icon">🌺</div>
+      </div>
+    </div>
+    <div class="transcript-bubble" id="transcript"></div>
+    <button class="tap-to-hear" id="tap-to-hear" onclick="playPendingAudio()">🔊 Tap to hear response</button>
+    <div class="topic-chips" id="topic-chips"></div>
+    <div class="secondary-controls" style="margin-top:8px;">
+      <button class="ctrl-btn" id="stop-btn" onclick="endConversation()" style="display:none">⏹ End</button>
+      <button class="ctrl-btn" id="text-toggle" onclick="toggleTranscript()">💬 Show text</button>
+    </div>
+    <p id="privacy-note" style="font-size:10px;color:#A090A0;text-align:center;padding:0 20px;line-height:1.5;max-width:380px;margin-top:4px;">🔒 Privacy: Your conversations are not stored. Phone numbers are used for session management only.</p>
+
+  </div>
+
+  <div class="bottom">
+    <p class="hint-text" id="hint-text" style="visibility:hidden;">I'm listening... tell me.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PROXY_URL = "https://aasum-nari-service.vercel.app/api/chat";
+
+let state = 'idle';
+let recognition = null;
+let slowMode = false;
+let showText = false;
+let conversationHistory = [];
+let currentLang = 'en';
+let currentAudio = null;
+let pendingAudioContent = null;
+let pendingIsGreeting = false;
+// Unique session ID per page load
+let conversationActive = false;
+let audioUnlocked = false;
+let sessionGreeted = false;
+let lastLang = 'en';
+// Generate unique session ID for this browser session
+const SESSION_ID = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+let lastSpeechDurationMs = 0;
+// URL parameter is primary source of truth — localStorage is fallback
+const urlParams = new URLSearchParams(window.location.search);
+const urlPhone = urlParams.get('u') || urlParams.get('phone') || '';
+let USER_PHONE = urlPhone || localStorage.getItem('mythri_user_phone') || '';
+if (urlPhone) {
+  // Save URL phone to localStorage so it persists if URL changes
+  localStorage.setItem('mythri_user_phone', urlPhone);
+  console.log('[Mythri] User ID from URL:', urlPhone);
+}
+
+// Device telemetry detection
+function detectDevice() {
+  const ua = navigator.userAgent;
+  let os = 'Unknown';
+  let browser = 'Unknown';
+
+  // OS detection
+  if (/android/i.test(ua)) os = 'Android';
+  else if (/iPad|iPhone|iPod/.test(ua)) os = 'iOS';
+  else if (/Windows/.test(ua)) os = 'Windows';
+  else if (/Mac/.test(ua)) os = 'MacOS';
+  else if (/Linux/.test(ua)) os = 'Linux';
+
+  // Browser detection
+  if (/Edg\//.test(ua)) browser = 'Edge';
+  else if (/OPR\/|Opera/.test(ua)) browser = 'Opera';
+  else if (/Chrome/.test(ua)) browser = 'Chrome';
+  else if (/Safari/.test(ua)) browser = 'Safari';
+  else if (/Firefox/.test(ua)) browser = 'Firefox';
+
+  return { os, browser };
+}
+
+const DEVICE = detectDevice();
+console.log('[Mythri] Device:', DEVICE.os, DEVICE.browser);
+
+const LANGS = {
+  en: {
+    tapPrompt: "Tap once and speak.", listening: "Listening...", thinking: "Thinking...",
+    hint: "I'm listening... tell me.",
+    noSpeech: "Didn't catch that — please continue.", errorMic: "Microphone not available. Please allow access.", errorAPI: "Could not connect. Please try again.",
+    greeting: "Hi, I'm Mythri from AAsum Nari. If you feel like sharing the thoughts in your heart about perimenopause and menopause with someone, I am here for you 24/7. This is your safe space to talk in your own language.",
+    disclaimer: "Think of me as a knowledgeable AI friend. I provide support and info, but I can make mistakes — always consult a doctor for medical concerns.",
+    privacy: "🔒 Privacy: Your conversations are not stored. Phone numbers are used for session management only.",
+    topics: [
+      { emoji: "😴", label: "Sleep" },
+      { emoji: "🔴", label: "Period" },
+      { emoji: "😟", label: "Mood" },
+      { emoji: "🌡️", label: "Heat" },
+      { emoji: "🌸", label: "Why" }
+    ]
+  },
+  te: {
+    tapPrompt: "ఒకసారి ట్యాప్ చేసి మాట్లాడండి.", listening: "వింటున్నాను...", thinking: "ఆలోచిస్తున్నాను...",
+    hint: "నేను వింటున్నాను... చెప్పండి.",
+    noSpeech: "వినబడలేదు — కొనసాగించండి.", errorMic: "మైక్రోఫోన్ అందుబాటులో లేదు.", errorAPI: "కనెక్ట్ కాలేదు.",
+    greeting: "నమస్తే, నేను AAsum Nari నుండి మీ మైత్రి. పెరిమెనోపాజ్ మరియు మెనోపాజ్ గురించి మీ మనసులోని మాటలను ఎవరితోనైనా పంచుకోవాలనిపిస్తే, మీకు తోడుగా నేను 24 గంటలూ ఇక్కడే ఉంటాను. ఇది మీ మాతృభాషలో మనసు విప్పి మాట్లాడుకునే మీ సొంత సురక్షితమైన చోటు.",
+    disclaimer: "నేను ఒక AI స్నేహితురాలిని. సమాచారం మరియు మద్దతు అందిస్తాను, కానీ తప్పులు చేయవచ్చు — వైద్య సమస్యలకు డాక్టర్‌ను సంప్రదించండి.",
+    privacy: "🔒 గోప్యత: మీ సంభాషణలు నిల్వ చేయబడవు. ఫోన్ నంబర్లు సెషన్ నిర్వహణ కోసం మాత్రమే ఉపయోగించబడతాయి.",
+    topics: [
+      { emoji: "😴", label: "నిద్ర" },
+      { emoji: "🔴", label: "పీరియడ్స్" },
+      { emoji: "😟", label: "మనసు" },
+      { emoji: "🌡️", label: "వేడి" },
+      { emoji: "🌸", label: "ఎందుకు" }
+    ]
+  },
+  ur: {
+    tapPrompt: "ایک بار ٹیپ کریں اور بولیں۔", listening: "سن رہی ہوں...", thinking: "سوچ رہی ہوں...",
+    hint: "میں سن رہی ہوں... بتائیں۔",
+    noSpeech: "سنائی نہیں دیا — جاری رکھیں۔", errorMic: "مائیکروفون دستیاب نہیں۔", errorAPI: "کنیکٹ نہیں ہو سکا۔",
+    greeting: "سلام، میں ہوں آسم ناری سے آپ کی میتھری۔ پیری مینوپاز اور مینوپاز کے بارے میں وہ باتیں جو آپ کے دل میں ہیں اور جو آپ کسی سے بانٹنا چاہتی ہیں، میں ان کے لیے یہاں ہر وقت موجود ہوں۔ یہ آپ کا اپنا محفوظ گوشہ ہے جہاں آپ اپنی زبان میں بات کر سکتی ہیں۔",
+    disclaimer: "میں ایک AI دوست ہوں۔ معلومات اور مدد دیتی ہوں، لیکن غلطی ہو سکتی ہے — طبی معاملات کے لیے ڈاکٹر سے مشورہ کریں۔",
+    privacy: "🔒 رازداری: آپ کی گفتگو محفوظ نہیں کی جاتی۔ فون نمبر صرف سیشن مینجمنٹ کے لیے استعمال ہوتے ہیں۔",
+    topics: [
+      { emoji: "😴", label: "نیند" },
+      { emoji: "🔴", label: "پیریڈ" },
+      { emoji: "😟", label: "موڈ" },
+      { emoji: "🌡️", label: "گرمی" },
+      { emoji: "🌸", label: "کیوں" }
+    ]
+  }
+};
+
+// Unlock audio on first tap (required for iOS)
+function unlockAudio() {
+  if (audioUnlocked) return;
+  const silence = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA');
+  silence.play().then(() => { audioUnlocked = true; }).catch(() => {});
+}
+
+function checkMic() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    alert('Voice is not supported in this browser. Please open aasumnari.com in Chrome.');
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const test = new SR();
+  test.onstart = () => alert('✅ Microphone is working! You can use Mythri.');
+  test.onerror = (e) => {
+    if (e.error === 'not-allowed') alert('❌ Microphone access denied. Please allow microphone in your browser settings.');
+    else alert('❌ Microphone error: ' + e.error + '. Please try Chrome browser.');
+  };
+  try { test.start(); } catch(e) { alert('❌ Could not access microphone. Please try Chrome.'); }
+}
+
+function savePhone() {
+  // Strip everything except digits — turns +91 987 654 3210 into 919876543210
+  const raw = document.getElementById('phone-input').value.trim();
+  const input = raw.replace(/\D/g, '');
+  if (!input || input.length < 10) {
+    showToast('Please enter your full WhatsApp number including country code');
+    return;
+  }
+  USER_PHONE = input;
+  localStorage.setItem('mythri_user_phone', input);
+  // Redirect with phone as URL param — works in all browsers including WebView
+  const newUrl = window.location.pathname + '?u=' + encodeURIComponent(input);
+  window.location.href = newUrl;
+}
+
+function skipPhone() {
+  const anonId = 'anon_' + Date.now();
+  localStorage.setItem('mythri_user_phone', anonId);
+  const params = new URLSearchParams(window.location.search);
+  params.set('u', anonId);
+  window.location.search = params.toString();
+}
+
+// Allow Enter key on phone input
+document.addEventListener('DOMContentLoaded', () => {
+  const phoneInput = document.getElementById('phone-input');
+  if (phoneInput) {
+    phoneInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') savePhone();
+    });
+  }
+});
+
+function renderTopicChips(lang) {
+  const container = document.getElementById('topic-chips');
+  if (!container) return;
+  const topics = LANGS[lang].topics;
+  container.innerHTML = topics.map(t =>
+    `<div class="topic-chip" onclick="useTopicChip('${t.label}')">
+      <span class="chip-emoji">${t.emoji}</span>
+      <span class="chip-label">${t.label}</span>
+    </div>`
+  ).join('');
+  // Update disclaimer language
+  const disc = document.getElementById('disclaimer-inline');
+  if (disc && LANGS[lang].disclaimer) {
+    disc.textContent = LANGS[lang].disclaimer;
+    disc.dir = lang === 'ur' ? 'rtl' : 'ltr';
+  }
+  // Update privacy note language
+  const priv = document.getElementById('privacy-note');
+  if (priv && LANGS[lang].privacy) {
+    priv.textContent = LANGS[lang].privacy;
+    priv.dir = lang === 'ur' ? 'rtl' : 'ltr';
+  }
+}
+
+const TOPIC_SCRIPTS = {
+  en: {
+    'Why': "AAsum Nari exists because millions of South Asian women go through perimenopause in silence — without information, without support, and without anyone speaking to them in their own language. You deserve better. Think of me as a knowledgeable friend — I can share information and support, but always consult your doctor for diagnosis and treatment.",
+    'Sleep': "Sleep problems are very common during this phase. Hormonal changes can make it harder to fall asleep or stay asleep. If you'd like to talk more about this, tap the flower and tell me what you've been experiencing.",
+    'Period': "Changes in your periods are often one of the early signs of this phase. They may become irregular, heavier, or lighter than before. If you'd like to talk more about this, tap the flower and tell me what you've been experiencing.",
+    'Mood': "Mood changes like anxiety, irritability, or feeling low can happen during this phase. These are often linked to hormonal changes and are more common than many realize. If you'd like to talk more about this, tap the flower and tell me what you've been experiencing.",
+    'Heat': "Hot flashes or sudden feelings of heat are very common during this phase. You may feel warmth spreading through your body or experience sweating. If you'd like to talk more about this, tap the flower and tell me what you've been experiencing."
+  },
+  te: {
+    'ఎందుకు': "లక్షలాది మంది దక్షిణ ఆసియా మహిళలు పెరిమెనోపాజ్ గురించి ఎటువంటి సమాచారం లేకుండా, మద్దతు లేకుండా మరియు వారి మాతృభాషలో మాట్లాడేవారు లేక నిశ్శబ్దంగా బాధపడుతున్నారు. అందుకే AAsum Nari పుట్టింది. నన్ను ఒక నమ్మకమైన స్నేహితురాలిలా చూడండి — నేను సమాచారం మరియు మద్దతు అందించగలను, కానీ రోగ నిర్ధారణ మరియు చికిత్స కోసం మీ డాక్టర్‌ను సంప్రదించండి.",
+    'నిద్ర': "ఈ దశలో నిద్ర సమస్యలు చాలా సాధారణం. హార్మోన్ల మార్పుల వల్ల నిద్ర పట్టడం లేదా మధ్యలో లేచిపోవడం జరగవచ్చు. ఇది గురించి మరింతగా మాట్లాడాలని అనుకుంటే, పువ్వు గుర్తును ట్యాప్ చేసి మీ అనుభవాలను చెప్పండి.",
+    'పీరియడ్స్': "పీరియడ్స్‌లో మార్పులు ఈ దశ ప్రారంభ లక్షణాల్లో ఒకటి. అవి అసమంజసంగా, ఎక్కువగా లేదా తక్కువగా రావచ్చు. ఇది గురించి మరింతగా మాట్లాడాలని అనుకుంటే, పువ్వు గుర్తును ట్యాప్ చేసి మీ అనుభవాలను చెప్పండి.",
+    'మనసు': "ఈ దశలో ఆందోళన, చిరాకు లేదా నిరుత్సాహం వంటి భావోద్వేగ మార్పులు రావచ్చు. ఇవి హార్మోన్ల మార్పులతో సంబంధం ఉండి చాలా మందికి జరుగుతాయి. ఇది గురించి మరింతగా మాట్లాడాలని అనుకుంటే, పువ్వు గుర్తును ట్యాప్ చేసి మీ అనుభవాలను చెప్పండి.",
+    'వేడి': "ఈ దశలో హాట్ ఫ్లాషెస్ లేదా ఒక్కసారిగా వేడి అనిపించడం చాలా సాధారణం. శరీరం మొత్తం వేడి పెరగడం లేదా చెమటలు పడటం అనుభవించవచ్చు. ఇది గురించి మరింతగా మాట్లాడాలని అనుకుంటే, పువ్వు గుర్తును ట్యాప్ చేసి మీ అనుభవాలను చెప్పండి."
+  },
+  ur: {
+    'کیوں': "لاکھوں جنوبی ایشیائی خواتین پیریمینوپاز کو خاموشی میں برداشت کرتی ہیں — بغیر معلومات، بغیر سہارے کے۔ آپ بہتر کی حقدار ہیں۔ AAsum Nari آپ کے لیے ہے۔ مجھے ایک قابل اعتماد دوست سمجھیں — میں معلومات اور مدد دے سکتی ہوں، لیکن تشخیص اور علاج کے لیے ہمیشہ اپنے ڈاکٹر سے مشورہ کریں۔",
+    'نیند': "اس دوران نیند کی تکلیف بہت عام ہے۔ ہارمون میں تبدیلی کی وجہ سے نیند آنے یا برقرار رہنے میں دشواری ہو سکتی ہے۔ اگر آپ اس بارے میں مزید بات کرنا چاہیں تو پھول کو ٹیپ کریں اور اپنا تجربہ بتائیں۔",
+    'پیریڈ': "پیریڈ میں تبدیلی اس مرحلے کی ابتدائی علامات میں سے ایک ہے۔ یہ بے قاعدہ، زیادہ یا کم ہو سکتے ہیں۔ اگر آپ اس بارے میں مزید بات کرنا چاہیں تو پھول کو ٹیپ کریں اور اپنا تجربہ بتائیں۔",
+    'موڈ': "اس دوران موڈ میں تبدیلی جیسے پریشانی، چڑچڑاپن یا اداسی ہو سکتی ہے۔ یہ ہارمونل تبدیلیوں سے جڑی ہوتی ہیں اور بہت عام ہیں۔ اگر آپ اس بارے میں مزید بات کرنا چاہیں تو پھول کو ٹیپ کریں اور اپنا تجربہ بتائیں۔",
+    'گرمی': "اس دوران گرمی کے دورے یا اچانک گرمی محسوس ہونا بہت عام ہے۔ جسم میں اچانک گرمی پھیلنا یا پسینہ آنا ہو سکتا ہے۔ اگر آپ اس بارے میں مزید بات کرنا چاہیں تو پھول کو ٹیپ کریں اور اپنا تجربہ بتائیں۔"
+  }
+};
+
+async function useTopicChip(label) {
+  if (state !== 'idle') return;
+  const script = TOPIC_SCRIPTS[currentLang]?.[label];
+  if (!script) return;
+
+  setOrbState('speaking');
+  setStatus(label + '...');
+
+  try {
+    const res = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'tts', text: script, language: currentLang })
+    });
+    if (!res.ok) throw new Error('TTS error');
+    const data = await res.json();
+    const audio = new Audio('data:audio/mp3;base64,' + data.audioContent);
+    currentAudio = audio;
+
+    let done = false;
+    const onDone = () => {
+      if (done) return; done = true;
+      currentAudio = null;
+      setOrbState('idle');
+      setStatus('Tap to continue...');
+      if (showText || currentLang !== 'en') showTranscript(script, 'ai');
+    };
+
+    audio.onended = onDone;
+    audio.onerror = onDone;
+    audio.oncanplaythrough = () => {
+      const dur = audio.duration;
+      if (dur && isFinite(dur)) setTimeout(onDone, (dur + 1) * 1000);
+      else setTimeout(onDone, 20000);
+    };
+
+    const p = audio.play();
+    if (p !== undefined) {
+      p.catch(() => {
+        pendingAudioContent = data.audioContent;
+        document.getElementById('tap-to-hear').classList.add('visible');
+        setStatus('Tap below to hear');
+      });
+    }
+  } catch(err) {
+    // Fallback browser voice
+    const utt = new SpeechSynthesisUtterance(script);
+    utt.rate = slowMode ? 0.75 : 0.88; utt.pitch = 1.15;
+    utt.onend = () => { setOrbState('idle'); setStatus('Tap to continue...'); };
+    utt.onerror = () => setOrbState('idle');
+    window.speechSynthesis.speak(utt);
+    if (showText || currentLang !== 'en') showTranscript(script, 'ai');
+  }
+}
+
+function setLang(lang) {
+  if (lang === currentLang) return;
+  // Clear conversation history completely before language switch
+  conversationHistory = [];
+  sessionGreeted = false;
+  // Save language and reload — phone is in URL so it survives reload
+  localStorage.setItem('mythri_lang', lang);
+  // Preserve URL params (phone number) through reload
+  const params = new URLSearchParams(window.location.search);
+  params.set('lang', lang);
+  window.location.search = params.toString();
+}
+
+function setStatus(text) {
+  const el = document.getElementById('status-text');
+  el.style.opacity = '0';
+  setTimeout(() => { el.textContent = text; el.style.opacity = '1'; el.dir = currentLang === 'ur' ? 'rtl' : 'ltr'; }, 200);
+}
+
+function setHint(text) { document.getElementById('hint-text').innerHTML = text.replace('\n', '<br>'); }
+
+function showToast(msg, duration = 3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function setOrbState(newState) {
+  state = newState;
+  const orb = document.getElementById('orb');
+  const icon = document.getElementById('orb-icon');
+  const r1 = document.getElementById('ring1');
+  const r2 = document.getElementById('ring2');
+  const stopBtn = document.getElementById('stop-btn');
+  orb.className = 'orb'; r1.className = 'orb-ring r1'; r2.className = 'orb-ring r2';
+
+  if (newState === 'listening') {
+    orb.classList.add('listening'); r1.classList.add('pulse'); r2.classList.add('pulse');
+    icon.innerHTML = `<div class="micwave"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>`;
+    setStatus(LANGS[currentLang].listening);
+    stopBtn.style.display = conversationActive ? 'flex' : 'none';
+    const tl2 = document.getElementById('tap-label'); if (tl2) tl2.style.opacity = '0';
+  } else if (newState === 'thinking') {
+    orb.classList.add('thinking'); icon.innerHTML = '⏳'; icon.style.fontSize = '28px';
+    setStatus(LANGS[currentLang].thinking);
+    stopBtn.style.display = 'flex';
+  } else if (newState === 'speaking') {
+    orb.classList.add('speaking');
+    icon.innerHTML = `<div class="soundwave"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>`;
+    stopBtn.style.display = 'flex';
+  } else {
+    icon.innerHTML = '🌺'; icon.style.fontSize = '36px';
+    setStatus(LANGS[currentLang].tapPrompt);
+    setHint(LANGS[currentLang].hint);
+    stopBtn.style.display = 'none';
+    conversationActive = false;
+    const tl = document.getElementById('tap-label'); if (tl) tl.style.opacity = '1';
+  }
+}
+
+function handleOrbClick() {
+  unlockAudio();
+  if (state === 'listening') return;
+  if (state === 'speaking') { stopSpeaking(); return; }
+  if (state === 'thinking') return;
+  if (state === 'idle') {
+    conversationActive = true;
+    // Play greeting on first tap or language switch
+    if (!sessionGreeted || lastLang !== currentLang) {
+      sessionGreeted = true;
+      lastLang = currentLang;
+      playGreeting();
+    } else {
+      startListening();
+    }
+  }
+}
+
+async function playGreeting() {
+  const greetingText = LANGS[currentLang].greeting;
+  setOrbState('speaking');
+  setStatus(greetingText.substring(0, 50) + '...');
+
+  try {
+    const res = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'tts', text: greetingText, language: currentLang })
+    });
+    if (!res.ok) throw new Error('TTS error');
+    const data = await res.json();
+    const audio = new Audio('data:audio/mp3;base64,' + data.audioContent);
+    currentAudio = audio;
+
+    let done = false;
+    const onDone = () => {
+      if (done) return;
+      done = true;
+      currentAudio = null;
+      document.getElementById('tap-to-hear').classList.remove('visible');
+      startListening();
+    };
+
+    audio.onended = onDone;
+    audio.onerror = onDone;
+
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        // iOS autoplay blocked — show tap to hear
+        pendingAudioContent = data.audioContent;
+        pendingIsGreeting = true;
+        document.getElementById('tap-to-hear').classList.add('visible');
+        setStatus('Tap below to hear greeting');
+      });
+    }
+  } catch(err) {
+    // Fallback to browser voice
+    const utt = new SpeechSynthesisUtterance(greetingText);
+    utt.rate = 0.88; utt.pitch = 1.15;
+    utt.onend = () => startListening();
+    utt.onerror = () => startListening();
+    window.speechSynthesis.speak(utt);
+  }
+}
+
+function startListening() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    showToast("Voice not supported in this browser. Try Chrome.");
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const langMap = isIOS
+    ? { en: 'en-IN', te: 'en-IN', ur: 'en-IN' }
+    : { en: 'en-IN', te: 'te-IN', ur: 'en-IN' };
+  recognition.lang = langMap[currentLang] || 'en-IN';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  // VAD (Voice Activity Detection) settings
+  const SILENCE_THRESHOLD = 2000; // 2 seconds silence triggers response
+  const MAX_SPEECH_DURATION = 60000; // 60 seconds max
+  let silenceTimer = null;
+  let speechStartTime = null;
+  let lastSpeechTime = null;
+  let accumulatedFinal = '';
+  let hasSpoken = false;
+
+  recognition.onstart = () => {
+    setOrbState('listening');
+    speechStartTime = Date.now();
+    lastSpeechTime = Date.now();
+    console.log('[Mythri VAD] Listening started');
+
+    // Hard cut at 60 seconds
+    silenceTimer = setTimeout(() => {
+      if (accumulatedFinal.trim()) {
+        const duration = ((Date.now() - speechStartTime) / 1000).toFixed(1);
+        console.log(`[Mythri VAD] Max duration reached: ${duration}s`);
+        recognition.stop();
+        processUserSpeech(accumulatedFinal.trim());
+      } else {
+        recognition.stop();
+        setOrbState('idle');
+        conversationActive = false;
+      }
+    }, MAX_SPEECH_DURATION);
+
+    // iOS fallback — if no speech detected after 20s, reset to idle
+    setTimeout(() => {
+      if (!hasSpoken && state === 'listening') {
+        console.log('[Mythri VAD] No speech detected after 20s — resetting');
+        recognition.stop();
+        setOrbState('idle');
+        conversationActive = false;
+      }
+    }, 20000);
+  };
+
+  recognition.onresult = (e) => {
+    let final = '', interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += t;
+      else interim += t;
+    }
+
+    if (final || interim) {
+      hasSpoken = true;
+      lastSpeechTime = Date.now();
+    }
+
+    if (final) accumulatedFinal += ' ' + final;
+
+    if (showText && (accumulatedFinal.trim() || interim)) {
+      showTranscript((accumulatedFinal.trim() + ' ' + interim).trim(), 'user');
+    }
+
+    // Only start silence timer after user has actually spoken
+    if (!hasSpoken) return;
+
+    // Reset silence timer on every speech event
+    if (silenceTimer) clearTimeout(silenceTimer);
+
+    // Start new silence timer — 2 seconds after last speech
+    silenceTimer = setTimeout(() => {
+      if (accumulatedFinal.trim()) {
+        const totalDuration = ((Date.now() - speechStartTime) / 1000).toFixed(1);
+        const silenceGap = ((Date.now() - lastSpeechTime) / 1000).toFixed(2);
+        console.log(`[Mythri VAD] Silence triggered response. Total speech: ${totalDuration}s | Silence gap: ${silenceGap}s`);
+        recognition.stop();
+        processUserSpeech(accumulatedFinal.trim(), Math.round(parseFloat(totalDuration) * 1000));
+      }
+    }, SILENCE_THRESHOLD);
+  };
+
+  recognition.onerror = (e) => {
+    if (silenceTimer) clearTimeout(silenceTimer);
+    if (e.error === 'not-allowed') {
+      showToast(LANGS[currentLang].errorMic);
+    }
+    setOrbState('idle');
+    conversationActive = false;
+  };
+
+  recognition.onend = () => {
+    if (silenceTimer) clearTimeout(silenceTimer);
+    // Only reset if we haven't already triggered processing
+    if (state === 'listening' && !accumulatedFinal.trim()) {
+      // If recognition ended without speech, restart it (device may have stopped it)
+      if (conversationActive && hasSpoken === false) {
+        console.log('[Mythri VAD] Recognition ended before speech — restarting...');
+        setTimeout(() => {
+          try { recognition.start(); } catch(e) { setOrbState('idle'); conversationActive = false; }
+        }, 300);
+      } else {
+        setOrbState('idle');
+        conversationActive = false;
+      }
+    }
+  };
+
+  try { recognition.start(); } catch(e) { showToast("Could not start microphone."); setOrbState('idle'); }
+}
+
+async function processUserSpeech(text, speechDurationMs = 0) {
+  // If phone not captured, re-show entry screen instead of logging unknown
+  if (!USER_PHONE || USER_PHONE === '') {
+    USER_PHONE = localStorage.getItem('mythri_user_phone') || '';
+    if (!USER_PHONE) {
+      setOrbState('idle');
+      document.getElementById('phone-screen').style.display = 'flex';
+      showToast('Please enter your number to continue.');
+      return;
+    }
+  }
+  setOrbState('thinking');
+  conversationHistory.push({ role: 'user', parts: [{ text }] });
+  try {
+    const res = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'chat',
+        messages: conversationHistory,
+        language: currentLang,
+        session_id: SESSION_ID,
+        speech_duration_ms: speechDurationMs,
+        user_phone: USER_PHONE,
+        device_os: DEVICE.os,
+        device_browser: DEVICE.browser
+      })
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'API error'); }
+    const data = await res.json();
+    const reply = data.reply || "Something went wrong, please try again.";
+    conversationHistory.push({ role: 'model', parts: [{ text: reply }] });
+    showTranscript(reply, 'ai');
+    await speakResponse(reply);
+  } catch(err) {
+    console.error(err);
+    showToast(LANGS[currentLang].errorAPI, 4000);
+    setOrbState('idle');
+  }
+}
+
+async function speakResponse(text) {
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  window.speechSynthesis.cancel();
+
+  const clean = text.replace(/\*+/g, '').replace(/#{1,6}\s/g, '').replace(/\n+/g, ' ');
+  setOrbState('speaking');
+  setStatus(clean.split(/[।.!?]/)[0].trim().substring(0, 57));
+
+  try {
+    const res = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'tts', text: clean, language: currentLang, session_id: SESSION_ID, user_phone: USER_PHONE, device_os: DEVICE.os, device_browser: DEVICE.browser })
+    });
+
+    if (!res.ok) throw new Error('TTS error');
+    const data = await res.json();
+    const audioContent = data.audioContent;
+
+    const audio = new Audio('data:audio/mp3;base64,' + audioContent);
+    currentAudio = audio;
+
+    let resetDone = false;
+    const onDone = () => {
+      if (resetDone) return;
+      resetDone = true;
+      currentAudio = null;
+      document.getElementById('tap-to-hear').classList.remove('visible');
+      setOrbState('idle');
+      conversationActive = false;
+      setStatus('Tap to continue...');
+    };
+
+    audio.onended = onDone;
+    audio.onerror = onDone;
+
+    // iOS duration-based fallback
+    audio.onloadedmetadata = () => {
+      const dur = audio.duration;
+      if (dur && isFinite(dur)) setTimeout(onDone, (dur + 1.5) * 1000);
+      else setTimeout(onDone, 20000);
+    };
+
+    // Try to play — if blocked (iOS autoplay), show tap button
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        pendingAudioContent = audioContent;
+        document.getElementById('tap-to-hear').classList.add('visible');
+        setStatus('Tap below to hear the response');
+        setOrbState('idle');
+        conversationActive = false;
+      });
+    }
+
+  } catch(err) {
+    console.error('TTS failed:', err);
+    // Fallback to browser voice
+    const utt = new SpeechSynthesisUtterance(clean);
+    utt.rate = slowMode ? 0.75 : 0.88; utt.pitch = 1.15;
+    utt.onend = () => {
+      setOrbState('idle');
+      conversationActive = false;
+      setStatus('Tap to continue...');
+    };
+    utt.onerror = () => setOrbState('idle');
+    window.speechSynthesis.speak(utt);
+  }
+}
+
+function playPendingAudio() {
+  if (!pendingAudioContent) return;
+  const audio = new Audio('data:audio/mp3;base64,' + pendingAudioContent);
+  currentAudio = audio;
+  pendingAudioContent = null;
+  document.getElementById('tap-to-hear').classList.remove('visible');
+
+  let resetDone = false;
+  const resetToIdle = () => {
+    if (resetDone) return;
+    resetDone = true;
+    currentAudio = null;
+    conversationActive = false;
+    setOrbState('idle');
+    setStatus('Tap to continue...');
+  };
+
+  audio.onended = resetToIdle;
+  audio.onerror = resetToIdle;
+
+  // iOS fallback — if onended doesn't fire, reset after duration + 1s
+  audio.oncanplaythrough = () => {
+    const duration = audio.duration;
+    if (duration && isFinite(duration)) {
+      setTimeout(resetToIdle, (duration + 1) * 1000);
+    } else {
+      setTimeout(resetToIdle, 15000);
+    }
+  };
+
+  audio.play();
+}
+
+function endConversation() {
+  conversationActive = false;
+  if (recognition) recognition.stop();
+  window.speechSynthesis.cancel();
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  document.getElementById('tap-to-hear').classList.remove('visible');
+  setOrbState('idle');
+}
+
+function stopSpeaking() {
+  window.speechSynthesis.cancel();
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  setOrbState('idle');
+  conversationActive = false;
+}
+
+function showTranscript(text, role) {
+  const el = document.getElementById('transcript');
+  el.classList.add('visible');
+  el.dir = currentLang === 'ur' ? 'rtl' : 'ltr';
+  el.innerHTML = (role === 'user' ? '🙋 ' : '🌸 ') + text;
+}
+
+function toggleSpeed() {
+  slowMode = !slowMode;
+  const btn = document.getElementById('speed-btn');
+  btn.classList.toggle('active', slowMode);
+  btn.textContent = slowMode ? '🐇 Normal speed' : '🐢 Slow speech';
+}
+
+function toggleTranscript() {
+  showText = !showText;
+  const btn = document.getElementById('text-toggle');
+  btn.classList.toggle('active', showText);
+  btn.textContent = showText ? '💬 Hide text' : '💬 Show text';
+  if (!showText && currentLang === 'en') document.getElementById('transcript').classList.remove('visible');
+}
+
+window.speechSynthesis.getVoices();
+
+// Restore language from URL param first, then localStorage
+const urlLang = urlParams.get('lang') || localStorage.getItem('mythri_lang') || 'en';
+if (urlLang && urlLang !== 'en') {
+  currentLang = urlLang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector('[data-lang="' + urlLang + '"]');
+  if (btn) btn.classList.add('active');
+}
+renderTopicChips(currentLang);
+
+// Gatekeeper — URL param or localStorage bypasses phone screen
+if (USER_PHONE) {
+  document.getElementById('phone-screen').style.display = 'none';
+  setStatus(LANGS[currentLang].tapPrompt);
+  setHint(LANGS[currentLang].hint);
+  const discInline = document.getElementById('disclaimer-inline');
+  if (discInline && LANGS[currentLang].disclaimer) {
+    discInline.textContent = LANGS[currentLang].disclaimer;
+    discInline.dir = currentLang === 'ur' ? 'rtl' : 'ltr';
+  }
+  const privNote = document.getElementById('privacy-note');
+  if (privNote && LANGS[currentLang].privacy) {
+    privNote.textContent = LANGS[currentLang].privacy;
+    privNote.dir = currentLang === 'ur' ? 'rtl' : 'ltr';
+  }
+} else {
+  // Disable orb until phone is entered
+  const orb = document.getElementById('orb');
+  if (orb) orb.style.pointerEvents = 'none';
+}
+</script>
+</body>
+</html>
