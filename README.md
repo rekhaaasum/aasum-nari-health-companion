@@ -1,5 +1,7 @@
 # 🌸 AAsum Nari — Mythri Voice Health Companion
 
+> 🌸 **Looking for our mission and community stories? Visit [aasumnari.org](https://www.aasumnari.org/)**
+
 > *"Aap akeli nahin hain."* — You are not alone.
 
 A voice-based AI health companion for South Asian women navigating perimenopause — built in Telugu, Urdu, and English, because health information should exist in the languages women actually speak.
