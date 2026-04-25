@@ -4,7 +4,7 @@
 
 A voice-based AI health companion for South Asian women navigating perimenopause — built in Telugu, Urdu, and English, because health information should exist in the languages women actually speak.
 
-**Live at [aasumnari.com](https://aasumnari.com)**
+**Live at [Mythri — AAsum Nari Voice Companion](https://aasumnari.com/aasum_nari_voice.html)**
 
 ---
 
@@ -76,7 +76,7 @@ South Asian women aged 35–55, primarily in India and the diaspora, who are exp
 
 🟢 **Production Alpha — v15 stability release, actively piloting with testers**
 
-- Live at [aasumnari.com](https://aasumnari.com)
+- Live at [aasumnari.com/aasum_nari_voice.html](https://aasumnari.com/aasum_nari_voice.html)
 - Testers across Hyderabad, Chicago, and Redwood City
 - Structured feedback via WhatsApp group ("AAsum Nari Health Circle")
 - Multi-region routing: US East (`iad1`) + Singapore (`sin1`) for India traffic
