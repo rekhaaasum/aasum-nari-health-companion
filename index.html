@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mythri by AAsum Nari | Voice AI Health Companion for South Asian Women</title>
+<meta name="description" content="Mythri is an AI-first voice health companion for South Asian women navigating perimenopause, speaking Telugu, Urdu, and English. Built on Gemini and Google Cloud TTS.">
+<meta property="og:title" content="Mythri | AI-First Voice Health Companion for South Asian Women">
+<meta property="og:description" content="An AI-first voice companion for perimenopause in Telugu, Urdu, and English. Speak, don't type. No app install.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://aasumnari.com/">
+<link rel="icon" href="/lion-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,560;0,9..144,700;1,9..144,400&family=Source+Sans+3:wght@400;600;700&family=Noto+Sans+Telugu:wght@400;600&family=Noto+Nastaliq+Urdu:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#35203B;
+  --plum:#5C2E5F;
+  --rani:#B4256E;
+  --marigold:#C98A1B;
+  --paper:#FFFFFF;
+  --blush:#FAF3F5;
+  --line:#EADDE4;
+  --muted:#6E5A70;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:"Source Sans 3",system-ui,sans-serif;
+  color:var(--ink);
+  background:var(--paper);
+  line-height:1.6;
+  font-size:17px;
+}
+.wrap{max-width:1040px;margin:0 auto;padding:0 24px}
+h1,h2,h3{font-family:"Fraunces",Georgia,serif;line-height:1.15;font-weight:560}
+h2{font-size:clamp(28px,4vw,38px);margin-bottom:18px}
+h3{font-size:21px;margin-bottom:8px}
+p{max-width:64ch}
+a{color:var(--rani)}
+.eyebrow{
+  font-size:13px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--marigold);font-weight:700;margin-bottom:12px;
+}
+section{padding:72px 0}
+section.alt{background:var(--blush)}
+.te{font-family:"Noto Sans Telugu","Source Sans 3",sans-serif}
+.ur{font-family:"Noto Nastaliq Urdu",serif;direction:rtl}
+
+/* header */
+header{
+  position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;max-width:1040px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-weight:700}
+.brand img{width:34px;height:34px;border-radius:8px}
+.brand span small{display:block;font-weight:400;font-size:12px;color:var(--muted);line-height:1}
+.cta{
+  display:inline-block;background:var(--rani);color:#fff;text-decoration:none;
+  padding:10px 20px;border-radius:999px;font-weight:700;font-size:15px;
+  transition:transform .15s ease, background .15s ease;
+}
+.cta:hover{background:#9A1E5D;transform:translateY(-1px)}
+.cta:focus-visible{outline:3px solid var(--marigold);outline-offset:2px}
+
+/* hero */
+.hero{padding:88px 0 80px;position:relative;overflow:hidden}
+.hero .wrap{position:relative;z-index:2}
+.trilingual{margin-bottom:28px}
+.trilingual .line{
+  font-family:"Fraunces",Georgia,serif;font-weight:560;
+  font-size:clamp(30px,5.4vw,54px);display:block;
+}
+.trilingual .line.te{font-family:"Noto Sans Telugu",sans-serif;color:var(--plum);font-size:clamp(26px,4.6vw,46px)}
+.trilingual .line.ur{font-family:"Noto Nastaliq Urdu",serif;color:var(--rani);font-size:clamp(26px,4.6vw,46px);line-height:1.9;direction:rtl;text-align:left;width:fit-content}
+.hero .sub{font-size:clamp(18px,2.2vw,22px);color:var(--muted);max-width:58ch;margin-bottom:14px}
+.hero .sub strong{color:var(--ink)}
+.hero .actions{margin-top:26px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.ghost{
+  display:inline-block;text-decoration:none;color:var(--plum);font-weight:700;
+  padding:10px 20px;border:2px solid var(--line);border-radius:999px;font-size:15px;
+}
+.ghost:hover{border-color:var(--plum)}
+/* voice ripple signature */
+.ripple{
+  position:absolute;right:-120px;top:50%;transform:translateY(-50%);
+  width:520px;height:520px;pointer-events:none;z-index:1;opacity:.5;
+}
+.ripple span{
+  position:absolute;inset:0;border-radius:50%;
+  border:1.5px solid var(--rani);
+  animation:pulse 5s ease-out infinite;
+}
+.ripple span:nth-child(2){animation-delay:1.25s}
+.ripple span:nth-child(3){animation-delay:2.5s}
+.ripple span:nth-child(4){animation-delay:3.75s}
+.ripple .dot{
+  position:absolute;left:50%;top:50%;width:14px;height:14px;border:none;
+  background:var(--marigold);border-radius:50%;transform:translate(-50%,-50%);
+  animation:none;
+}
+@keyframes pulse{
+  0%{transform:scale(.1);opacity:.85}
+  100%{transform:scale(1);opacity:0}
+}
+@media (prefers-reduced-motion: reduce){
+  .ripple span{animation:none;opacity:.15;transform:scale(.55)}
+  html{scroll-behavior:auto}
+}
+
+/* problem */
+.problem-list{list-style:none;margin:22px 0 0;display:grid;gap:12px;max-width:640px}
+.problem-list li{padding-left:26px;position:relative}
+.problem-list li::before{
+  content:"";position:absolute;left:0;top:10px;width:10px;height:10px;
+  border-radius:50%;background:var(--rani);
+}
+
+/* framework */
+.pillars{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-top:26px}
+.pillar{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+.pillar b{display:block;color:var(--plum);margin-bottom:4px}
+.pillar span{font-size:15px;color:var(--muted)}
+section.alt .pillar{background:#fff}
+
+/* features */
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:26px}
+.feature{border:1px solid var(--line);border-radius:var(--radius);padding:20px;background:#fff}
+.feature .fi{font-size:22px;display:block;margin-bottom:8px}
+.feature b{color:var(--plum)}
+.feature p{font-size:15px;color:var(--muted);margin-top:4px}
+
+/* matrix table */
+.matrix{width:100%;border-collapse:collapse;margin-top:24px;font-size:15px;background:#fff;border-radius:var(--radius);overflow:hidden}
+.matrix th,.matrix td{padding:13px 16px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+.matrix th{background:var(--plum);color:#fff;font-family:"Source Sans 3",sans-serif;font-size:14px;letter-spacing:.04em;text-transform:uppercase}
+.matrix td:first-child{font-weight:700;color:var(--rani);white-space:nowrap}
+.matrix tr:last-child td{border-bottom:none}
+.table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius)}
+
+/* traction */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:26px 0}
+.stat{border-left:4px solid var(--marigold);padding:6px 0 6px 18px}
+.stat b{font-family:"Fraunces",serif;font-size:30px;display:block;color:var(--plum);line-height:1.1}
+.stat span{font-size:15px;color:var(--muted)}
+
+/* stack */
+.stack{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.chip{
+  border:1px solid var(--line);border-radius:999px;padding:8px 18px;
+  font-size:15px;font-weight:600;color:var(--plum);background:#fff;
+}
+.chip.g{border-color:var(--marigold);color:var(--marigold)}
+
+/* roadmap */
+.roadmap{list-style:none;margin-top:22px;display:grid;gap:10px;max-width:640px}
+.roadmap li{display:flex;gap:12px;align-items:baseline}
+.roadmap li::before{content:"→";color:var(--rani);font-weight:700}
+
+/* founder */
+.founder{display:grid;grid-template-columns:220px 1fr;gap:34px;align-items:start;margin-top:10px}
+.founder .photo{
+  width:220px;height:260px;border-radius:var(--radius);
+  overflow:hidden;background:var(--blush);
+}
+.founder .photo img{width:100%;height:100%;object-fit:cover;border-radius:var(--radius);display:block}
+.founder .links{margin-top:14px;display:flex;gap:18px;flex-wrap:wrap;font-weight:600}
+@media (max-width:640px){.founder{grid-template-columns:1fr}.founder .photo{width:100%;max-width:280px}}
+
+/* footer */
+footer{background:var(--ink);color:#E7D9E6;padding:48px 0;font-size:15px}
+footer a{color:#F1B8D3}
+footer .wrap{display:grid;gap:18px}
+.disclaimer{font-size:13px;color:#B99CB6;max-width:78ch;line-height:1.55}
+.foot-top{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav">
+    <a class="brand" href="/">
+      <img src="/lion-logo.png" alt="AAsum Nari logo">
+      <span>Mythri<small>by AAsum Nari</small></span>
+    </a>
+    <a class="cta" href="/aasum_nari_voice.html">Talk to Mythri</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="ripple" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span class="dot"></span>
+  </div>
+  <div class="wrap">
+    <div class="eyebrow">Voice AI · Women's Health · Telugu · Urdu · English</div>
+    <div class="trilingual">
+      <span class="line">Your trusted friend.</span>
+      <span class="line te">మీ నమ్మకమైన స్నేహితురాలు.</span>
+      <span class="line ur">آپ کی قابلِ بھروسہ دوست۔</span>
+    </div>
+    <p class="sub">Mythri is an <strong>AI-first voice health companion</strong> for South Asian women navigating perimenopause. She listens and speaks in Telugu, Urdu, and English, because health information should exist in the languages women actually speak.</p>
+    <div class="actions">
+      <a class="cta" href="/aasum_nari_voice.html">Talk to Mythri</a>
+      <a class="ghost" href="#how-it-scales">How it scales</a>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="eyebrow">The Problem</div>
+    <h2>Perimenopause affects every woman. For millions of South Asian women, it happens in silence.</h2>
+    <ul class="problem-list">
+      <li>Doctors dismiss symptoms as "stress" or "just getting older."</li>
+      <li>Families don't talk about it.</li>
+      <li>Health information in Telugu or Urdu is nearly nonexistent.</li>
+      <li>Women endure hot flashes, sleepless nights, mood changes, and joint pain alone, without language for what they are experiencing.</li>
+    </ul>
+    <p style="margin-top:22px"><strong>Mythri was built to close that gap.</strong></p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">Meet Mythri</div>
+    <h2>Mythri (మైత్రి) means friendship.</h2>
+    <p>A woman taps the flower, speaks in her language, and Mythri responds: warm, spoken, culturally informed, and free of judgment. Like a knowledgeable friend who happens to know a lot about women's health.</p>
+    <p style="margin-top:14px">Every response follows the <strong>Actionable Empathy framework</strong>:</p>
+    <div class="pillars">
+      <div class="pillar"><b>Empathy</b><span>Validate the feeling warmly</span></div>
+      <div class="pillar"><b>Environment</b><span>One practical environment tip</span></div>
+      <div class="pillar"><b>Nutrition</b><span>One South Asian grounded nutrition tip</span></div>
+      <div class="pillar"><b>Movement</b><span>One gentle movement or breathing tip</span></div>
+      <div class="pillar"><b>The Science</b><span>One warm sentence on the biology behind the symptom</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="eyebrow">What It Does</div>
+    <h2>Speak, don't type. No app install. No keyboard needed.</h2>
+    <div class="features">
+      <div class="feature"><span class="fi">🎙️</span><b>Voice in, voice out</b><p>Designed for women who prefer speaking over typing, including those who cannot read or write comfortably in any language.</p></div>
+      <div class="feature"><span class="fi">🌐</span><b>Three languages, done right</b><p>Telugu, Urdu, and English with culturally appropriate honorifics (Meeru / Aap / You).</p></div>
+      <div class="feature"><span class="fi">🧠</span><b>Symptom-aware brain</b><p>Detects which symptom cluster a woman is describing and routes to the correct guidance. Hot flash tips never appear for joint pain.</p></div>
+      <div class="feature"><span class="fi">🏮</span><b>Culturally grounded</b><p>NFHS-5 data, Indian menopause age norms, and South Asian nutrition: methi, flaxseed, turmeric, ghee, sesame, ragi.</p></div>
+      <div class="feature"><span class="fi">📱</span><b>Zero-friction access</b><p>Opens in any mobile browser, straight from a WhatsApp link. No download, no signup wall.</p></div>
+      <div class="feature"><span class="fi">🩺</span><b>Knows its limits</b><p>Mythri is not a doctor. She directs women to medical care when symptoms are severe, new, or worsening.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">The Engine</div>
+    <h2>Zero-hallucination health guidance by design.</h2>
+    <p>A server-side detection engine identifies the symptom cluster before the AI is ever called. Each cluster maps to specific, clinically sourced, hard-coded guidance, eliminating generic responses and hallucination risk. Detection works across English, Telugu script, and Urdu script.</p>
+    <div class="table-scroll" style="margin-top:24px">
+    <table class="matrix">
+      <thead><tr><th>Cluster</th><th>Symptoms Detected</th><th>Example Guidance</th></tr></thead>
+      <tbody>
+        <tr><td>Vasomotor</td><td>Hot flashes, night sweats, flushing</td><td>Cooling breath (Sitali), cotton layers, spice moderation</td></tr>
+        <tr><td>Metabolic</td><td>Fatigue, brain fog, weight, memory</td><td>Lentils and chickpeas, resistance training</td></tr>
+        <tr><td>Skeletal</td><td>Joint pain, bone ache, stiffness</td><td>Sesame and almonds, calcium targets, quadriceps work</td></tr>
+        <tr><td>Emotional</td><td>Mood, anxiety, sleep, stress</td><td>Box breathing, omega-3 seeds, sleep hygiene</td></tr>
+        <tr><td>Urogenital</td><td>Irregular periods, bleeding, dryness</td><td>Iron-rich foods, pelvic exercises, safety guidance</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="how-it-scales">
+  <div class="wrap">
+    <div class="eyebrow">Growth</div>
+    <h2>How Mythri scales.</h2>
+    <p>Mythri is a digital-native product delivered entirely through the browser: no app install, no download, opening straight from a WhatsApp link. That makes distribution as simple as one woman sharing a link with another. Mythri is free for individual women.</p>
+    <p style="margin-top:14px"><strong>Growth starts where trust already exists.</strong> The first wave runs through our Hyderabad field pilot, where a physiotherapy facility seeing 200 patients a day and an on-the-ground coordinator connect Mythri with the women who need her. From there, Mythri expands across Telugu and Urdu speaking communities in India, then, with Hindi, Tamil, Kannada, Bengali, and more Indian languages, to all of India, South Asia, and the diaspora in the US and the Gulf.</p>
+    <p style="margin-top:14px">The underlying engine, culturally localized voice AI with a zero-hallucination clinical guidance architecture, extends to new languages and new women's health domains. In a later phase, Mythri's reach opens partnership and licensing opportunities with hospital networks, clinics, and women's health organizations across these markets.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">Traction</div>
+    <h2>Production alpha, live today.</h2>
+    <div class="stats">
+      <div class="stat"><b>20</b><span>Testers onboarded across Hyderabad, Chicago, and the SF Bay Area</span></div>
+      <div class="stat"><b>100+</b><span>Structured menopause assessments collected through our India field pilot</span></div>
+      <div class="stat"><b>3</b><span>Languages live in production: Telugu, Urdu, and English</span></div>
+      <div class="stat"><b>2 regions</b><span>US East and Singapore routing for low-latency India traffic</span></div>
+    </div>
+    <p>Structured tester feedback flows through the AAsum Nari Health Circle WhatsApp community, with privacy-first analytics on every session. No conversation transcripts are ever stored.</p>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="eyebrow">Technology</div>
+    <h2>Built on Google's AI stack.</h2>
+    <div class="stack">
+      <span class="chip g">Gemini 2.5 Flash</span>
+      <span class="chip g">Google Cloud Text-to-Speech</span>
+      <span class="chip">Web Speech API</span>
+      <span class="chip">Vercel serverless</span>
+      <span class="chip">Privacy-first analytics</span>
+    </div>
+    <p style="margin-top:20px">The roadmap migrates to <strong>Gemini Live</strong> for real-time conversational voice and <strong>Vertex AI</strong> for enterprise-grade reliability.</p>
+    <ul class="roadmap">
+      <li>Gemini Live migration: real-time voice, natural interruptions</li>
+      <li>Vertex AI migration for enterprise reliability</li>
+      <li>Hindi language support</li>
+      <li>Symptom tracking across sessions</li>
+      <li>Integration of 100 real perimenopause stories from our India field pilot</li>
+      <li>Distribution partnerships with women's health networks in Andhra Pradesh and Telangana</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">Founder</div>
+    <h2>Rekha Yarlagadda</h2>
+    <div class="founder">
+      <div class="photo"><img src="/founder.jpg" alt="Rekha Yarlagadda, founder of Mythri and AAsum Nari"></div>
+      <div>
+        <p>Rekha Yarlagadda is a senior engineering leader with 18+ years building and scaling platforms across healthcare IT, fintech, and insurance, most recently leading four engineering teams serving a 300,000+ member financial platform. She holds graduate degrees in Biochemistry and Genetics and in Computer Science, with peer-reviewed publications in Alzheimer's research.</p>
+        <p style="margin-top:14px">Through the community health programs she leads for South Asian women, she kept meeting women who had suffered for years without a name for what was happening to them. Those programs became Mythri's user research lab and its first distribution channel. Mythri is the version that scales: one conversation at a time, in her language.</p>
+        <div class="links">
+          <a href="https://linkedin.com/in/rekhay">LinkedIn</a>
+          <a href="https://github.com/rekhaaasum">GitHub</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-top">
+      <div><strong style="color:#fff">Mythri</strong> · AAsum Nari</div>
+      <div>Community and stories: <a href="https://www.aasumnari.org">aasumnari.org</a></div>
+    </div>
+    <p class="disclaimer">Medical Disclaimer: The information, including opinions and recommendations, on this platform is meant for informational and educational purposes only. Aasum Nari, the Mythri Education Series podcast, and Mythri AI are not medical organizations. Medical advice or medical diagnosis cannot be provided to you through this platform, any associated website, or customer portals. Using this platform does not establish a patient-physician relationship. Always consult a qualified healthcare provider for medical concerns.</p>
+    <div style="font-size:13px;color:#B99CB6">© 2026 AAsum Nari. All rights reserved.</div>
+  </div>
+</footer>
+
+</body>
+</html>
