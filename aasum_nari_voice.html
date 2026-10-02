@@ -241,7 +241,7 @@ let sessionGreeted = false;
 let lastLang = 'en';
 // Generate unique session ID for this browser session
 const SESSION_ID = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-const APP_VERSION = '2026-04-23-v15';
+const APP_VERSION = '2026-10-02-v15.1';
 let lastSpeechDurationMs = 0;
 // URL parameter is primary source of truth — localStorage is fallback
 const urlParams = new URLSearchParams(window.location.search);
@@ -663,7 +663,10 @@ async function startListening() {
     ? { en: 'en-IN', te: 'en-IN', ur: 'en-IN' }
     : { en: 'en-IN', te: 'te-IN', ur: 'en-IN' };
   recognition.lang = langMap[currentLang] || 'en-IN';
-  recognition.continuous = true;
+  // Android Chrome ends sessions on its own and repeats growing phrases in continuous mode;
+  // one utterance per session lets onend send the turn. Desktop and iOS keep continuous.
+  const isAndroid = /android/i.test(navigator.userAgent);
+  recognition.continuous = !isAndroid;
   recognition.interimResults = true;
 
   // VAD (Voice Activity Detection) settings
@@ -674,6 +677,16 @@ async function startListening() {
   let lastSpeechTime = null;
   let accumulatedFinal = '';
   let hasSpoken = false;
+  let safetyTimer = null; // separate from silenceTimer so onend/onresult never clear it by accident
+  const SAFETY_NET_MS = 15000;
+  let sent = false;
+  // Every path that sends the turn goes through here, so a turn is sent at most once
+  const sendTurn = (durationMs) => {
+    if (sent) return;
+    sent = true;
+    if (safetyTimer) clearTimeout(safetyTimer);
+    processUserSpeech(accumulatedFinal.trim(), durationMs);
+  };
 
   recognition.onstart = () => {
     setOrbState('listening');
@@ -687,7 +700,7 @@ async function startListening() {
         const duration = ((Date.now() - speechStartTime) / 1000).toFixed(1);
         console.log(`[Mythri VAD] Max duration reached: ${duration}s`);
         recognition.stop();
-        processUserSpeech(accumulatedFinal.trim());
+        sendTurn();
       } else {
         recognition.stop();
         setOrbState('idle');
@@ -715,11 +728,26 @@ async function startListening() {
     }
 
     if (final || interim) {
+      if (!hasSpoken) {
+        // Safety net: if still listening 15s after speech was first heard with no reply started, send what we have
+        safetyTimer = setTimeout(() => {
+          if (state === 'listening' && accumulatedFinal.trim()) {
+            console.log('[Mythri VAD] Safety net fired — processing');
+            try { recognition.stop(); } catch (err) {}
+            sendTurn(Date.now() - speechStartTime);
+          }
+        }, SAFETY_NET_MS);
+      }
       hasSpoken = true;
       lastSpeechTime = Date.now();
     }
 
-    if (final) accumulatedFinal += ' ' + final;
+    if (final) {
+      // Android repeats the whole phrase so far in each final result: replace instead of appending
+      const acc = accumulatedFinal.trim().toLowerCase();
+      if (acc && final.trim().toLowerCase().startsWith(acc)) accumulatedFinal = final.trim();
+      else accumulatedFinal += ' ' + final;
+    }
 
     if (showText && (accumulatedFinal.trim() || interim)) {
       showTranscript((accumulatedFinal.trim() + ' ' + interim).trim(), 'user');
@@ -738,13 +766,14 @@ async function startListening() {
         const silenceGap = ((Date.now() - lastSpeechTime) / 1000).toFixed(2);
         console.log(`[Mythri VAD] Silence triggered response. Total speech: ${totalDuration}s | Silence gap: ${silenceGap}s`);
         recognition.stop();
-        processUserSpeech(accumulatedFinal.trim(), Math.round(parseFloat(totalDuration) * 1000));
+        sendTurn(Math.round(parseFloat(totalDuration) * 1000));
       }
     }, SILENCE_THRESHOLD);
   };
 
   recognition.onerror = (e) => {
     if (silenceTimer) clearTimeout(silenceTimer);
+    if (safetyTimer) clearTimeout(safetyTimer);
     if (e.error === 'not-allowed') {
       showToast(LANGS[currentLang].errorMic);
     }
@@ -754,6 +783,13 @@ async function startListening() {
 
   recognition.onend = () => {
     if (silenceTimer) clearTimeout(silenceTimer);
+    // Android ends the session itself after a pause: send what was heard.
+    // processUserSpeech sets state to 'thinking' synchronously, so the silence-timer path cannot double-send.
+    if (state === 'listening' && accumulatedFinal.trim()) {
+      sendTurn(Date.now() - speechStartTime);
+      return;
+    }
+    if (safetyTimer) clearTimeout(safetyTimer);
     // Only reset if we haven't already triggered processing
     if (state === 'listening' && !accumulatedFinal.trim()) {
       // If recognition ended without speech, restart it (device may have stopped it)
