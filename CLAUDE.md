@@ -11,7 +11,7 @@ Public frontend for Mythri, AAsum Nari's voice health companion. The app is one 
 5. This repo is public. Never commit secrets, keys, phone numbers or backend-internal details.
 6. Keep the existing `LANGS` pattern for all user-facing text: every new string gets `en`, `te` and `ur` entries. Put English in all three and mark `te` and `ur` with `// TODO(Ray): translate`. Never write Telugu or Urdu yourself.
 
-## Known solved issues (fixed in v15, do not re-investigate or undo)
+## Known solved issues (fixed in v15 and v15.1, do not re-investigate or undo)
 
 | Issue | Root cause | Fix in the code |
 |---|---|---|
@@ -19,8 +19,9 @@ Public frontend for Mythri, AAsum Nari's voice health companion. The app is one 
 | `setLang()` drops `?u=` | Language switch reloaded without params | Params preserved on reload |
 | Android WebView blocks the microphone | WebView security policy | Chrome redirect banner (`webview-banner`) |
 | Language leaking across sessions | Session state not cleared | `window.location.reload()` on language switch |
+| Android Chrome stuck in listening mode and repeated words in the transcript (F0, v15.1) | Android ends the recognition session by itself, and each final result repeats the whole phrase so far | In `startListening`: `onend` sends the heard text; a final result that extends `accumulatedFinal` replaces it instead of appending; `continuous = false` on Android only; 15-second safety net; all sends go through `sendTurn` |
 
-Any change near these (URL params, `setLang`, `detectDevice`, the WebView banner) must keep them working. Mention in the pull request how you checked.
+Any change near these (URL params, `setLang`, `detectDevice`, the WebView banner, `startListening` and its `onend`/`onresult` handlers) must keep them working. Mention in the pull request how you checked.
 
 ## How to work
 
