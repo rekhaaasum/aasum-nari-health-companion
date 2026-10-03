@@ -791,9 +791,9 @@ async function startListening() {
   recognition.onerror = (e) => {
     if (silenceTimer) clearTimeout(silenceTimer);
     if (safetyTimer) clearTimeout(safetyTimer);
-    if (e.error === 'not-allowed') {
-      showToast(LANGS[currentLang].errorMic);
-    }
+    // Tell the user what happened. 'aborted' is the app stopping recognition itself, so no toast.
+    const errorToast = { 'no-speech': 'noSpeech', 'network': 'errorAPI', 'audio-capture': 'errorMic', 'not-allowed': 'errorMic' }[e.error];
+    if (errorToast) showToast(LANGS[currentLang][errorToast]);
     setOrbState('idle');
     conversationActive = false;
   };
