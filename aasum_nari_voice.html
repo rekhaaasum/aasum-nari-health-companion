@@ -241,12 +241,28 @@ let sessionGreeted = false;
 let lastLang = 'en';
 // Generate unique session ID for this browser session
 const SESSION_ID = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-const APP_VERSION = '2026-10-02-v15.1';
+const APP_VERSION = '2026-10-02-v15.2';
 let lastSpeechDurationMs = 0;
 // URL parameter is primary source of truth — localStorage is fallback
 const urlParams = new URLSearchParams(window.location.search);
-const urlPhone = urlParams.get('u') || urlParams.get('phone') || '';
-let USER_PHONE = urlPhone || localStorage.getItem('mythri_user_phone') || '';
+let urlPhone = urlParams.get('u') || urlParams.get('phone') || '';
+// Real phone numbers saved by the old registration screen must never be sent as the user ID.
+// Looks like a number = digits only, optional leading +, 7 or more digits (spaces/dashes/brackets ignored).
+function looksLikePhoneNumber(v) {
+  return /^\+?\d{7,}$/.test(String(v || '').replace(/[\s\-().]/g, ''));
+}
+function newGuestId() {
+  return 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+}
+let storedPhone = localStorage.getItem('mythri_user_phone') || '';
+// Discard number-like values before anything uses them; a discarded ?u= counts as "not in the URL"
+// so Force URL Sync below rewrites the address bar with the guest ID.
+if (looksLikePhoneNumber(urlPhone)) urlPhone = '';
+if (looksLikePhoneNumber(storedPhone)) {
+  storedPhone = newGuestId();
+  localStorage.setItem('mythri_user_phone', storedPhone);
+}
+let USER_PHONE = urlPhone || storedPhone || '';
 if (urlPhone) {
   // Save URL phone to localStorage so it persists if URL changes
   localStorage.setItem('mythri_user_phone', urlPhone);
@@ -256,7 +272,7 @@ if (urlPhone) {
 // visitors land directly on the flower. To re-enable phone-gated registration for
 // active testing, remove this block and the phone screen will show again.
 if (!USER_PHONE) {
-  USER_PHONE = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+  USER_PHONE = newGuestId();
   localStorage.setItem('mythri_user_phone', USER_PHONE);
   console.log('[Mythri] Guest session started:', USER_PHONE);
 }
@@ -298,6 +314,7 @@ if (DEVICE.browser === 'AndroidWebView') {
 if (USER_PHONE && !urlPhone) {
   const syncUrl = new URL(window.location.href);
   syncUrl.searchParams.set('u', USER_PHONE);
+  syncUrl.searchParams.delete('phone'); // an old ?phone=<number> alias must not stay in the address bar
   window.location.href = syncUrl.toString();
 }
 
