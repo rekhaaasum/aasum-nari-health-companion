@@ -8,6 +8,8 @@ Work in this order: **F0** (Tier 1, do first, it blocks Android users today), th
 
 ## Task F0 (Tier 1, do first): Android gets stuck in listening mode and repeats words
 
+**Status: done and merged** (pull request 1; `APP_VERSION` `2026-10-02-v15.1`).
+
 **Reported Oct 1 by a tester on Android Chrome:** the greeting plays, he speaks, the orb stays in listening mode and Mythri never replies. The on-screen transcript shows growing repeats: "hi hi hi my hi my tree hi my tree how hi my tree how are you...".
 
 **Root cause, from reading `startListening` (confirm before changing):**
@@ -32,9 +34,11 @@ Work in this order: **F0** (Tier 1, do first, it blocks Android users today), th
 - In `recognition.onerror`, handle `language-not-supported`: if the current recognition language is not `en-IN`, set a session-level flag, show a toast from a new `LANGS` string `voiceLangFallback` (English: "Urdu voice input isn't available on this device yet. You can speak in English, or type instead."), and restart recognition with `en-IN`. While the flag is set, use `en-IN` for Urdu for the rest of the session. Apply the same fallback to Telugu so a device without Telugu support also degrades gracefully.
 - Bump `APP_VERSION` to `2026-10-03-v16`.
 
-**Manual test for Ray:** on Android Chrome (Kamakshi's Samsung is ideal), select Urdu, say a symptom in Urdu, and turn on text display. The transcript should appear in Urdu script. Then do the same in Telugu to check nothing regressed.
+**Manual test for Ray:** on Android Chrome (Kamakshi's Samsung is ideal), select Urdu, say a symptom in Urdu, and turn on text display. The transcript should appear in Urdu script. Then do the same in Telugu to check nothing regressed. **A tester who actually speaks Urdu is needed for this test**; someone who only reads the words aloud, or an English speaker, cannot tell whether the transcript is right.
 
 ## Task F5 (Tier 1, right after F0): Stop sending phone numbers saved by the old registration screen
+
+**Status: done and merged** (pull request 2; `APP_VERSION` `2026-10-02-v15.2`).
 
 **Problem:** the phone-number screen is switched off, but testers who registered before still have their number saved in the browser (`localStorage` key `mythri_user_phone`) and in old links (`?u=<number>`). On every visit the app reads it back, Force URL Sync copies it into the address bar, and it is sent as `user_phone` with every request, so real phone numbers keep reaching Axiom.
 
@@ -48,6 +52,8 @@ Work in this order: **F0** (Tier 1, do first, it blocks Android users today), th
 **Manual test for Ray:** open the app with `?u=5551234567`. The address bar should switch to a `guest_` ID, and the next Axiom entries should show that guest ID, not the number. Then open with `?u=t07` and check it stays `t07`, including after switching language.
 
 ## Task F2 (Tier 1): Stop failing silently
+
+**Status: done and merged** (pull request 3; no `APP_VERSION` change).
 
 **Problem:** `recognition.onerror` only shows a message for `not-allowed`. Every other error (no speech heard, network drop, no microphone) silently returns the orb to idle, so the user can't tell what happened. This matters at a venue with unreliable Wi-Fi.
 
@@ -118,6 +124,7 @@ Tell testers to open the link in Chrome, not inside WhatsApp. WhatsApp's built-i
 
 The open iOS issues (autoplay blocked with a tap-to-hear workaround, unreliable `onended` with a duration fallback already in place, and the every-other-tap problem) stay as they are until after Oct 10. Changing audio handling a week before a live demo risks breaking what works.
 
+- Telugu and Urdu voice recognition and reply volume are unreliable on iPhone. This is known and deferred until after Oct 10, with the other iOS issues; no code changes before the demo.
 - **Demo on Android Chrome**, not an iPhone.
 - If an attendee uses an iPhone, tell them to tap "tap to hear" when it appears.
 - On Oct 6, ask Kamakshi to try to reproduce the every-other-tap problem and write down exact steps. If she can, fix it after Oct 10 with those steps.
