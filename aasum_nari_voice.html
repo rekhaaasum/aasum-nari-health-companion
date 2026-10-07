@@ -106,6 +106,8 @@ html, body {
 .bottom { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 16px; }
 
 .hint-text { font-size: 12px; color: rgba(245,245,245,0.5); text-align: center; line-height: 1.6; }
+.safety-line { font-size: 12px; line-height: 1.55; text-align: center; max-width: 420px; padding: 0 8px; color: rgba(245,245,245,0.85); }
+.safety-line a { color: inherit; font-weight: 600; text-decoration: underline; padding: 4px 0; }
 
 .secondary-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 
@@ -198,6 +200,7 @@ html, body {
         <div class="orb-icon" id="orb-icon">🌺</div>
       </div>
     </div>
+    <p class="safety-line" id="safety-line">Mythri is not a doctor. If you are struggling or feel unsafe, please talk to your doctor or call Tele-MANAS on <a href="tel:14416">14416</a>.</p>
     <div class="transcript-bubble" id="transcript"></div>
     <button class="tap-to-hear" id="tap-to-hear" onclick="playPendingAudio()">🔊 Tap to hear response</button>
     <div class="topic-chips" id="topic-chips"></div>
@@ -326,6 +329,7 @@ const LANGS = {
     greeting: "Hi, I'm Mythri from AAsum Nari. If you feel like sharing the thoughts in your heart about perimenopause and menopause with someone, I am here for you 24/7. This is your safe space to talk in your own language.",
     disclaimer: "Think of me as a knowledgeable AI friend. I provide support and info, but I can make mistakes — always consult a doctor for medical concerns.",
     privacy: "🔒 Privacy: Your conversations are not stored. Phone numbers are used for session management only.",
+    safetyLine: "Mythri is not a doctor. If you are struggling or feel unsafe, please talk to your doctor or call Tele-MANAS on 14416.",
     topics: [
       { emoji: "😴", label: "Sleep" },
       { emoji: "🔴", label: "Period" },
@@ -341,6 +345,7 @@ const LANGS = {
     greeting: "నమస్తే, నేను AAsum Nari నుండి మీ మైత్రి. పెరిమెనోపాజ్ మరియు మెనోపాజ్ గురించి మీ మనసులోని మాటలను ఎవరితోనైనా పంచుకోవాలనిపిస్తే, మీకు తోడుగా నేను 24 గంటలూ ఇక్కడే ఉంటాను. ఇది మీ మాతృభాషలో మనసు విప్పి మాట్లాడుకునే మీ సొంత సురక్షితమైన చోటు.",
     disclaimer: "నేను ఒక AI స్నేహితురాలిని. సమాచారం మరియు మద్దతు అందిస్తాను, కానీ తప్పులు చేయవచ్చు — వైద్య సమస్యలకు డాక్టర్‌ను సంప్రదించండి.",
     privacy: "🔒 గోప్యత: మీ సంభాషణలు నిల్వ చేయబడవు. ఫోన్ నంబర్లు సెషన్ నిర్వహణ కోసం మాత్రమే ఉపయోగించబడతాయి.",
+    safetyLine: "మైత్రి డాక్టర్ కాదు. లక్షణాలు తీవ్రంగా ఉంటే, దయచేసి డాక్టరును సంప్రదించండి లేదా 14416 కు కాల్ చేయండి.", // Telugu text supplied by Ray
     topics: [
       { emoji: "😴", label: "నిద్ర" },
       { emoji: "🔴", label: "పీరియడ్స్" },
@@ -356,6 +361,7 @@ const LANGS = {
     greeting: "سلام، میں ہوں آسم ناری سے آپ کی میتھری۔ پیری مینوپاز اور مینوپاز کے بارے میں وہ باتیں جو آپ کے دل میں ہیں اور جو آپ کسی سے بانٹنا چاہتی ہیں، میں ان کے لیے یہاں ہر وقت موجود ہوں۔ یہ آپ کا اپنا محفوظ گوشہ ہے جہاں آپ اپنی زبان میں بات کر سکتی ہیں۔",
     disclaimer: "میں ایک AI دوست ہوں۔ معلومات اور مدد دیتی ہوں، لیکن غلطی ہو سکتی ہے — طبی معاملات کے لیے ڈاکٹر سے مشورہ کریں۔",
     privacy: "🔒 رازداری: آپ کی گفتگو محفوظ نہیں کی جاتی۔ فون نمبر صرف سیشن مینجمنٹ کے لیے استعمال ہوتے ہیں۔",
+    safetyLine: "میتری کوئی ڈاکٹر نہیں ہے۔ اگر علامات شدید ہوں تو براہ کرم ڈاکٹر سے رجوع کریں یا 14416 پر کال کریں۔", // Urdu text supplied by Ray
     topics: [
       { emoji: "😴", label: "نیند" },
       { emoji: "🔴", label: "پیریڈ" },
@@ -1034,6 +1040,18 @@ if (USER_PHONE) {
   if (discInline && LANGS[currentLang].disclaimer) {
     discInline.textContent = LANGS[currentLang].disclaimer;
     discInline.dir = currentLang === 'ur' ? 'rtl' : 'ltr';
+  }
+  const safety = document.getElementById('safety-line');
+  const safetyText = LANGS[currentLang].safetyLine;
+  if (safety && safetyText) {
+    const [before, after] = safetyText.split('14416');
+    safety.textContent = before;
+    const tel = document.createElement('a');
+    tel.href = 'tel:14416';
+    tel.textContent = '14416';
+    safety.appendChild(tel);
+    safety.append(after);
+    safety.dir = currentLang === 'ur' ? 'rtl' : 'ltr';
   }
   const privNote = document.getElementById('privacy-note');
   if (privNote && LANGS[currentLang].privacy) {
