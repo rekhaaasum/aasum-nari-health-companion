@@ -70,11 +70,13 @@ Keep the existing reset to idle.
 
 ## Task F3 (Tier 2, drop first if behind): Device details and troubleshooting events
 
+**Status:** part 3 (events) is done for 13 of the 15 allowed events, in the funnel-events pull request (`APP_VERSION` `2026-10-20-v15.4`). Parts 1, 2 and 4 are not built. Details are in part 3.
+
 Needs backend Task 10 deployed to the same preview. Goal: when a tester says "it didn't work on my phone," the logs show which phone, which browser, and where it failed.
 
 **1. Fix browser detection in `detectDevice`.** Samsung Internet, Mi Browser and UC Browser all include "Chrome" in their user agent, so today they are logged as Chrome. These browsers are common in India and handle speech recognition differently. Before the Chrome check, detect `SamsungBrowser` → `SamsungInternet`, `MiuiBrowser` → `MiBrowser`, `UCBrowser` → `UCBrowser`, and `FBAN`/`FBAV`/`Instagram` → `InAppBrowser`. Keep the existing WebView check first.
 
-**2. Collect `device_details` once at page load** and send it with every `chat`, `tts` and `event` request:
+**2. Collect `device_details` once at page load** and send it with every `chat`, `tts` and `event` request: **Decision Oct 20: `device_details` is not sent with events.** The backend event handler rejects any field outside its allowlist (including `device_details`) with HTTP 400, so this part is not built and must not be added to events.
 - `os_version` and `device_model`: from `navigator.userAgentData.getHighEntropyValues(['platformVersion', 'model'])` where available (Chrome on Android). Chrome hides the phone model in the ordinary user agent, so this is the only way to get it. Fall back to parsing the user agent. Must not block the first request by more than 300 ms.
 - `browser_version`: major version number.
 - `network_type`: `navigator.connection.effectiveType` if available (for example `4g`, `3g`).
@@ -83,17 +85,27 @@ Needs backend Task 10 deployed to the same preview. Goal: when a tester says "it
 - `in_app_browser`: true for Android WebView or the in-app browsers above.
 - `debug_mode`: true when the URL has `debug=1`.
 
-**3. Send small events** with `fetch(..., { keepalive: true })` and `type: "event"`, never blocking the user and ignoring failures:
+**3. Send small events** with `fetch(..., { keepalive: true })` and `type: "event"`, never blocking the user and ignoring failures. **Done in the funnel-events pull request, except `stt_lang_fallback` and `consent_given`.**
+
+*Allowed events* (the backend allowlist; any other name gets HTTP 400): `page_load`, `stt_start`, `stt_result`, `stt_error`, `stt_restart`, `stt_lang_fallback`, `mic_permission`, `audio_play_blocked`, `audio_onended_fallback`, `audio_error`, `tts_request_error`, `chat_request_error`, `consent_given`, `first_question_sent`, `speech_empty`.
+
+*Allowed fields.* Every event sends `type: "event"`, the event name, `app_version`, `session_id` and `language_selected` (`en`, `te` or `ur`). Where relevant it may also send `greeting_fixed`, `permission_state`, `error_code`, `stt_lang`, `time_to_first_result_ms`, `restart_count` or `http_status`. Any other field (for example `device_details`, `language`, `user_phone` or `consent_version`) gets HTTP 400 for the whole event. `permission_state`, `error_code` and `stt_lang` must come from the backend's fixed lists. No text, ever.
+
+*What each event means in the app:*
 - `page_load` once, sent only after the Force URL Sync redirect check has passed, so the redirect does not log two page loads.
-- `mic_permission` with `permission_state` from `navigator.permissions.query({ name: 'microphone' })` where supported.
-- `stt_start` with `stt_lang`; `stt_result` with `time_to_first_result_ms` on the first result of a turn; `stt_error` with `error_code` from `recognition.onerror`; `stt_restart` with `restart_count` in `recognition.onend` when it restarts; `stt_lang_fallback` from Task F1.
+- `mic_permission` with `permission_state` `granted`, `denied` or `prompt`. There are no separate granted and denied events, and `mic_tapped` is not used (it is not on the allowlist). The state is read from `navigator.permissions.query({ name: 'microphone' })` at page load where supported, then updated when the mic starts (`granted`) or is refused (`denied`). A state is sent only when it changes.
+- `stt_start` with `stt_lang`; `stt_result` with `time_to_first_result_ms` on the first result of a turn; `stt_error` with `error_code` from `recognition.onerror` (not for `aborted`, which is the app stopping recognition itself); `stt_restart` with `restart_count` in `recognition.onend` when it restarts.
+- `speech_empty` once per listening attempt when no speech came: a `no-speech` error, the 20-second no-speech reset, or the recognition ending with nothing heard.
+- `first_question_sent` once per page load, when the first question goes to the backend.
 - `audio_play_blocked` when `play()` is rejected (the tap-to-hear path); `audio_onended_fallback` when the duration timer resets instead of `onended`; `audio_error` from `audio.onerror`.
-- `tts_request_error` and `chat_request_error` with `http_status` when a backend call fails.
+- `tts_request_error` and `chat_request_error` with `http_status` (and `error_code` `http_error`) when a backend call returns an error, or `error_code` `network_error` or `timeout` when it cannot be reached.
+- `greeting_fixed: true` is sent on `page_load`, `stt_start`, `speech_empty` and `first_question_sent`.
+- **Not yet sent:** `stt_lang_fallback` (waits for F1) and `consent_given` (waits for F4; see F4 about `consent_version`).
 - Never include transcript or reply text in any event.
 
 **4. Show a session code for testers.** When the URL has `debug=1`, show a small line at the bottom of the screen: "Session: " plus the last 6 characters of `SESSION_ID`. A tester can read it out, and Ray can find that session in Axiom.
 
-**Manual test for Ray:** open the preview on an Android phone with `?debug=1`, run one conversation, deny the microphone once, and check in Axiom that events arrive with the phone model, browser and network type filled in.
+**Manual test for Ray (events part, as built):** on Android Chrome, open the app with your tester link, run one conversation, deny the microphone once on a fresh install, and check in Axiom that `type: event` rows arrive with `session_id`, `language_selected` and `frontend_version`: `page_load`, `mic_permission` (`prompt`, then `granted` or `denied`), `stt_start`, `stt_result`, `first_question_sent`, and `speech_empty` after a silent try. The phone model, browser and network type are not logged, because the `device_details` part is not built.
 
 ## Task F4 (Tier 2): "Before we talk" agreement screen
 
@@ -107,7 +119,7 @@ Needs backend Task 10 deployed to the same preview. Goal: when a tester says "it
   - "When you speak, your voice is turned into text by your browser's speech service, and Google's AI service writes Mythri's reply. AAsum Nari does not store recordings or what you say. We keep basic technical details, like your phone model, to fix problems."
   - The existing approved disclaimer text from `LANGS`.
   - Button: "I understand and agree". Links to "Terms of use" and "Privacy policy" only if `TERMS_URL` and `PRIVACY_URL` constants are set (leave them empty for now; hide the links when empty).
-- On agree: save `mythri_consent` = `{ version: CONSENT_VERSION, at: <ISO time> }` in `localStorage` and send a `consent_given` event with `consent_version` (backend Task 10 accepts it). Start `CONSENT_VERSION` at `"1"`.
+- On agree: save `mythri_consent` = `{ version: CONSENT_VERSION, at: <ISO time> }` in `localStorage` and send a `consent_given` event. The backend accepts `consent_given` but currently rejects a `consent_version` field with HTTP 400, so send the event without that field until the backend adds it. Start `CONSENT_VERSION` at `"1"`.
 - If `localStorage` is unavailable, show the card every visit rather than skip it.
 - The card must not interfere with the Force URL Sync redirect or `setLang` reload (see `CLAUDE.md`). Switching language on the card should show the card in the new language.
 - `te` and `ur` strings are `TODO(Ray): translate`.

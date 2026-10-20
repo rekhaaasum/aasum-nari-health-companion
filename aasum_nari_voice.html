@@ -244,7 +244,7 @@ let sessionGreeted = false;
 let lastLang = 'en';
 // Generate unique session ID for this browser session
 const SESSION_ID = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-const APP_VERSION = '2026-10-20-v15.3';
+const APP_VERSION = '2026-10-20-v15.4';
 let lastSpeechDurationMs = 0;
 // URL parameter is primary source of truth — localStorage is fallback
 const urlParams = new URLSearchParams(window.location.search);
@@ -313,11 +313,48 @@ if (DEVICE.browser === 'AndroidWebView') {
   document.getElementById('webview-banner').classList.add('visible');
 }
 
+// ─── Funnel and troubleshooting events ───────────────────────────────────────
+// Counts and fixed codes only, never any text. Each event sends only: type, event, app_version, session_id,
+// language_selected and, where relevant, greeting_fixed, permission_state, error_code, stt_lang,
+// time_to_first_result_ms, restart_count or http_status. Fire and forget: failures are ignored.
+function logEvent(name, extra) {
+  try {
+    const body = { type: 'event', event: name, app_version: APP_VERSION, session_id: SESSION_ID };
+    if (['en', 'te', 'ur'].includes(currentLang)) body.language_selected = currentLang;
+    fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
+      body: JSON.stringify(Object.assign(body, extra))
+    }).catch(() => {});
+  } catch (e) {}
+}
+const STT_ERROR_CODES = ['no-speech', 'audio-capture', 'network', 'not-allowed', 'service-not-allowed', 'bad-grammar', 'language-not-supported'];
+function sttErrorCode(code) { return STT_ERROR_CODES.includes(code) ? code : 'unknown'; }
+function audioErrorCode(audio) {
+  return ['unknown', 'MEDIA_ERR_ABORTED', 'MEDIA_ERR_NETWORK', 'MEDIA_ERR_DECODE', 'MEDIA_ERR_SRC_NOT_SUPPORTED'][audio && audio.error ? audio.error.code : 0] || 'unknown';
+}
+function audioFailed(audio) { logEvent('audio_error', { error_code: audioErrorCode(audio) }); }
+function playBlockedCode(err) { return err && ['NotAllowedError', 'NotSupportedError', 'AbortError'].includes(err.name) ? err.name : 'unknown'; }
+// For fetch(...).catch(networkFailure('tts_request_error')): logs the failure, then lets the original handling run
+function networkFailure(name) {
+  return e => { logEvent(name, { error_code: e && (e.name === 'TimeoutError' || e.name === 'AbortError') ? 'timeout' : 'network_error' }); throw e; };
+}
+let lastMicState = null;
+function reportMicPermission(permissionState) {
+  if (permissionState === lastMicState) return;
+  lastMicState = permissionState;
+  logEvent('mic_permission', { permission_state: permissionState });
+}
+let firstQuestionLogged = false;
+let redirectingForUrlSync = false;
+
 // Force URL Sync: If identity is in localStorage but not in URL, redirect once to bake it in
 if (USER_PHONE && !urlPhone) {
   const syncUrl = new URL(window.location.href);
   syncUrl.searchParams.set('u', USER_PHONE);
   syncUrl.searchParams.delete('phone'); // an old ?phone=<number> alias must not stay in the address bar
+  redirectingForUrlSync = true;
   window.location.href = syncUrl.toString();
 }
 
@@ -504,8 +541,8 @@ async function useTopicChip(label) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'tts', text: script, language: currentLang, user_phone: USER_PHONE || 'unknown', session_id: SESSION_ID, device_os: DEVICE.os, device_browser: DEVICE.browser, app_version: APP_VERSION })
-    });
-    if (!res.ok) throw new Error('TTS error');
+    }).catch(networkFailure('tts_request_error'));
+    if (!res.ok) { logEvent('tts_request_error', { http_status: res.status, error_code: 'http_error' }); throw new Error('TTS error'); }
     const data = await res.json();
     const audio = new Audio('data:audio/mp3;base64,' + data.audioContent);
     currentAudio = audio;
@@ -520,16 +557,16 @@ async function useTopicChip(label) {
     };
 
     audio.onended = onDone;
-    audio.onerror = onDone;
+    audio.onerror = () => { audioFailed(audio); onDone(); };
     audio.oncanplaythrough = () => {
       const dur = audio.duration;
-      if (dur && isFinite(dur)) setTimeout(onDone, (dur + 1) * 1000);
-      else setTimeout(onDone, 20000);
+      setTimeout(() => { if (!done) logEvent('audio_onended_fallback'); onDone(); }, dur && isFinite(dur) ? (dur + 1) * 1000 : 20000);
     };
 
     const p = audio.play();
     if (p !== undefined) {
-      p.catch(() => {
+      p.catch((err) => {
+        logEvent('audio_play_blocked', { error_code: playBlockedCode(err) });
         pendingAudioContent = data.audioContent;
         document.getElementById('tap-to-hear').classList.add('visible');
         setStatus('Tap below to hear');
@@ -633,8 +670,8 @@ async function playGreeting() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'tts', text: greetingText, language: currentLang, session_id: SESSION_ID, user_phone: USER_PHONE || 'unknown', device_os: DEVICE.os, device_browser: DEVICE.browser, app_version: APP_VERSION })
-    });
-    if (!res.ok) throw new Error('TTS error');
+    }).catch(networkFailure('tts_request_error'));
+    if (!res.ok) { logEvent('tts_request_error', { http_status: res.status, error_code: 'http_error' }); throw new Error('TTS error'); }
     const data = await res.json();
     const audio = new Audio('data:audio/mp3;base64,' + data.audioContent);
     currentAudio = audio;
@@ -649,7 +686,7 @@ async function playGreeting() {
     };
 
     audio.onended = onDone;
-    audio.onerror = onDone;
+    audio.onerror = () => { audioFailed(audio); onDone(); };
 
     const playPromise = audio.play();
     if (playPromise !== undefined) {
@@ -657,9 +694,10 @@ async function playGreeting() {
       // so the blocked-autoplay (tap to hear) path below is unchanged.
       playPromise.then(() => {
         const dur = audio.duration;
-        setTimeout(onDone, dur && isFinite(dur) ? (dur + 1.5) * 1000 : 20000);
+        setTimeout(() => { if (!done) logEvent('audio_onended_fallback'); onDone(); }, dur && isFinite(dur) ? (dur + 1.5) * 1000 : 20000);
       }, () => {});
-      playPromise.catch(() => {
+      playPromise.catch((err) => {
+        logEvent('audio_play_blocked', { error_code: playBlockedCode(err) });
         // iOS autoplay blocked — show tap to hear
         pendingAudioContent = data.audioContent;
         pendingIsGreeting = true;
@@ -709,6 +747,9 @@ async function startListening() {
   const MIC_START_TIMEOUT = 8000; // if the mic has not started by then (for example a permission prompt nobody answers), go back to the flower
   let micStarted = false;
   let startTimer = null;
+  let restartCount = 0;
+  let emptyLogged = false;
+  const logSpeechEmpty = () => { if (emptyLogged) return; emptyLogged = true; logEvent('speech_empty', { greeting_fixed: true }); };
   let safetyTimer = null; // separate from silenceTimer so onend/onresult never clear it by accident
   const SAFETY_NET_MS = 15000;
   let sent = false;
@@ -723,6 +764,7 @@ async function startListening() {
   recognition.onstart = () => {
     micStarted = true;
     if (startTimer) clearTimeout(startTimer);
+    reportMicPermission('granted');
     setOrbState('listening');
     speechStartTime = Date.now();
     lastSpeechTime = Date.now();
@@ -746,6 +788,7 @@ async function startListening() {
     setTimeout(() => {
       if (!hasSpoken && state === 'listening') {
         console.log('[Mythri VAD] No speech detected after 20s — resetting');
+        logSpeechEmpty();
         recognition.stop();
         setOrbState('idle');
         conversationActive = false;
@@ -763,6 +806,7 @@ async function startListening() {
 
     if (final || interim) {
       if (!hasSpoken) {
+        logEvent('stt_result', { time_to_first_result_ms: speechStartTime ? Math.min(60000, Math.max(0, Date.now() - speechStartTime)) : 0 });
         // Safety net: if still listening 15s after speech was first heard with no reply started, send what we have
         safetyTimer = setTimeout(() => {
           if (state === 'listening' && accumulatedFinal.trim()) {
@@ -809,6 +853,10 @@ async function startListening() {
     if (silenceTimer) clearTimeout(silenceTimer);
     if (safetyTimer) clearTimeout(safetyTimer);
     if (startTimer) clearTimeout(startTimer);
+    // Events: 'aborted' is the app stopping recognition itself, so it is not an error worth counting
+    if (e.error !== 'aborted') logEvent('stt_error', { error_code: sttErrorCode(e.error) });
+    if (e.error === 'no-speech') logSpeechEmpty();
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') reportMicPermission('denied');
     // Tell the user what happened. 'aborted' is the app stopping recognition itself, so no toast.
     const errorToast = { 'no-speech': 'noSpeech', 'network': 'errorAPI', 'audio-capture': 'errorMic', 'not-allowed': 'errorMic' }[e.error];
     if (errorToast) showToast(LANGS[currentLang][errorToast]);
@@ -830,17 +878,20 @@ async function startListening() {
       // If recognition ended without speech, restart it (device may have stopped it)
       if (conversationActive && hasSpoken === false) {
         console.log('[Mythri VAD] Recognition ended before speech — restarting...');
+        restartCount++;
+        logEvent('stt_restart', { restart_count: Math.min(restartCount, 100) });
         setTimeout(() => {
           try { recognition.start(); } catch(e) { setOrbState('idle'); conversationActive = false; }
         }, 300);
       } else {
+        if (!hasSpoken) logSpeechEmpty();
         setOrbState('idle');
         conversationActive = false;
       }
     }
   };
 
-  try { recognition.start(); } catch(e) { showToast("Could not start microphone."); setOrbState('idle'); }
+  try { recognition.start(); logEvent('stt_start', { stt_lang: recognition.lang, greeting_fixed: true }); } catch(e) { showToast("Could not start microphone."); setOrbState('idle'); }
 
   const rec = recognition;
   startTimer = setTimeout(() => {
@@ -864,6 +915,7 @@ async function processUserSpeech(text, speechDurationMs = 0) {
     }
   }
   setOrbState('thinking');
+  if (!firstQuestionLogged) { firstQuestionLogged = true; logEvent('first_question_sent', { greeting_fixed: true }); }
   conversationHistory.push({ role: 'user', parts: [{ text }] });
   try {
     const res = await fetch(PROXY_URL, {
@@ -880,8 +932,11 @@ async function processUserSpeech(text, speechDurationMs = 0) {
         device_browser: DEVICE.browser,
         app_version: APP_VERSION
       })
-    });
-    if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'API error'); }
+    }).catch(networkFailure('chat_request_error'));
+    if (!res.ok) {
+      logEvent('chat_request_error', { http_status: res.status, error_code: 'http_error' });
+      const err = await res.json(); throw new Error(err.error || 'API error');
+    }
     const data = await res.json();
     const reply = data.reply || "Something went wrong, please try again.";
     conversationHistory.push({ role: 'model', parts: [{ text: reply }] });
@@ -907,9 +962,9 @@ async function speakResponse(text) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'tts', text: clean, language: currentLang, session_id: SESSION_ID, user_phone: USER_PHONE, device_os: DEVICE.os, device_browser: DEVICE.browser, app_version: APP_VERSION })
-    });
+    }).catch(networkFailure('tts_request_error'));
 
-    if (!res.ok) throw new Error('TTS error');
+    if (!res.ok) { logEvent('tts_request_error', { http_status: res.status, error_code: 'http_error' }); throw new Error('TTS error'); }
     const data = await res.json();
     const audioContent = data.audioContent;
 
@@ -928,19 +983,19 @@ async function speakResponse(text) {
     };
 
     audio.onended = onDone;
-    audio.onerror = onDone;
+    audio.onerror = () => { audioFailed(audio); onDone(); };
 
     // iOS duration-based fallback
     audio.onloadedmetadata = () => {
       const dur = audio.duration;
-      if (dur && isFinite(dur)) setTimeout(onDone, (dur + 1.5) * 1000);
-      else setTimeout(onDone, 20000);
+      setTimeout(() => { if (!resetDone) logEvent('audio_onended_fallback'); onDone(); }, dur && isFinite(dur) ? (dur + 1.5) * 1000 : 20000);
     };
 
     // Try to play — if blocked (iOS autoplay), show tap button
     const playPromise = audio.play();
     if (playPromise !== undefined) {
-      playPromise.catch(() => {
+      playPromise.catch((err) => {
+        logEvent('audio_play_blocked', { error_code: playBlockedCode(err) });
         pendingAudioContent = audioContent;
         document.getElementById('tap-to-hear').classList.add('visible');
         setStatus('Tap below to hear the response');
@@ -988,16 +1043,12 @@ function playPendingAudio() {
   };
 
   audio.onended = resetToIdle;
-  audio.onerror = resetToIdle;
+  audio.onerror = () => { audioFailed(audio); resetToIdle(); };
 
   // iOS fallback — if onended doesn't fire, reset after duration + 1s
   audio.oncanplaythrough = () => {
     const duration = audio.duration;
-    if (duration && isFinite(duration)) {
-      setTimeout(resetToIdle, (duration + 1) * 1000);
-    } else {
-      setTimeout(resetToIdle, 15000);
-    }
+    setTimeout(() => { if (!resetDone) logEvent('audio_onended_fallback'); resetToIdle(); }, duration && isFinite(duration) ? (duration + 1) * 1000 : 15000);
   };
 
   audio.play();
@@ -1084,6 +1135,20 @@ if (USER_PHONE) {
   // Disable orb until phone is entered
   const orb = document.getElementById('orb');
   if (orb) orb.style.pointerEvents = 'none';
+}
+
+// Funnel events at page load. Not sent when the Force URL Sync redirect is about to reload the page,
+// so the redirect does not count two page loads.
+if (!redirectingForUrlSync) {
+  logEvent('page_load', { greeting_fixed: true });
+  try {
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'microphone' }).then(status => {
+        reportMicPermission(status.state);
+        status.onchange = () => reportMicPermission(status.state);
+      }).catch(() => {});
+    }
+  } catch (e) {}
 }
 </script>
 </body>
