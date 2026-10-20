@@ -27,12 +27,14 @@ Work in this order: **F0** (Tier 1, do first, it blocks Android users today), th
 
 ## Task F1 (Tier 2): Let Urdu speakers actually speak Urdu
 
+**Status: code done in the F1 pull request, not yet tested on a real Android phone with an Urdu speaker** (`APP_VERSION` `2026-10-20-v16`). It must not be merged for the demo until that test passes; if it cannot be tested in time, leave Urdu on `en-IN`.
+
 **Problem:** in `startListening` (the `langMap` near `recognition.lang`), Urdu is hard-coded to `en-IN` on every device. Urdu speech is transcribed as English guesses, so Urdu voice input is effectively broken. This is the alpha issue "Urdu speech recognition falls back to en-IN on all devices". It is the code, not the browser.
 
 **Changes**
 - Non-iOS devices: map `ur` to `ur-IN`. Leave the iOS mapping unchanged for now.
-- In `recognition.onerror`, handle `language-not-supported`: if the current recognition language is not `en-IN`, set a session-level flag, show a toast from a new `LANGS` string `voiceLangFallback` (English: "Urdu voice input isn't available on this device yet. You can speak in English, or type instead."), and restart recognition with `en-IN`. While the flag is set, use `en-IN` for Urdu for the rest of the session. Apply the same fallback to Telugu so a device without Telugu support also degrades gracefully.
-- Bump `APP_VERSION` to `2026-10-03-v16`.
+- In `recognition.onerror`, handle `language-not-supported`: if the current recognition language is not `en-IN`, set a session-level flag, show a toast from a new `LANGS` string `voiceLangFallback` (English: "Urdu voice input isn't available on this device yet. You can speak in English."; the app has no typing input, so "or type instead" was dropped; the Telugu entry says "Telugu voice input" in the same way; the Telugu and Urdu strings are English placeholders marked `TODO(Ray): translate`), and restart recognition with `en-IN`. While the flag is set, use `en-IN` for Urdu for the rest of the session. Apply the same fallback to Telugu so a device without Telugu support also degrades gracefully.
+- Bump `APP_VERSION` (done: `2026-10-20-v16`). The fallback also sends the `stt_lang_fallback` event with `stt_lang`.
 
 **Manual test for Ray:** on Android Chrome (Kamakshi's Samsung is ideal), select Urdu, say a symptom in Urdu, and turn on text display. The transcript should appear in Urdu script. Then do the same in Telugu to check nothing regressed. **A tester who actually speaks Urdu is needed for this test**; someone who only reads the words aloud, or an English speaker, cannot tell whether the transcript is right.
 

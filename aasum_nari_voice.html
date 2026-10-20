@@ -244,7 +244,7 @@ let sessionGreeted = false;
 let lastLang = 'en';
 // Generate unique session ID for this browser session
 const SESSION_ID = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-const APP_VERSION = '2026-10-20-v15.4';
+const APP_VERSION = '2026-10-20-v16';
 let lastSpeechDurationMs = 0;
 // URL parameter is primary source of truth — localStorage is fallback
 const urlParams = new URLSearchParams(window.location.search);
@@ -347,6 +347,8 @@ function reportMicPermission(permissionState) {
   logEvent('mic_permission', { permission_state: permissionState });
 }
 let firstQuestionLogged = false;
+// Set when the device cannot recognise Urdu or Telugu: from then on this session uses en-IN
+let sttFallbackToEnglish = false;
 let redirectingForUrlSync = false;
 
 // Force URL Sync: If identity is in localStorage but not in URL, redirect once to bake it in
@@ -367,6 +369,7 @@ const LANGS = {
     disclaimer: "Think of me as a knowledgeable AI friend. I provide support and info, but I can make mistakes — always consult a doctor for medical concerns.",
     privacy: "🔒 Privacy: Your conversations are not stored. Phone numbers are used for session management only.",
     safetyLine: "Mythri is not a doctor. If you are struggling or feel unsafe, please talk to your doctor or call Tele-MANAS on 14416.",
+    voiceLangFallback: "Voice input is not available in this language on this device yet. Please speak in English.",
     topics: [
       { emoji: "😴", label: "Sleep" },
       { emoji: "🔴", label: "Period" },
@@ -383,6 +386,7 @@ const LANGS = {
     disclaimer: "నేను ఒక AI స్నేహితురాలిని. సమాచారం మరియు మద్దతు అందిస్తాను, కానీ తప్పులు చేయవచ్చు — వైద్య సమస్యలకు డాక్టర్‌ను సంప్రదించండి.",
     privacy: "🔒 గోప్యత: మీ సంభాషణలు నిల్వ చేయబడవు. ఫోన్ నంబర్లు సెషన్ నిర్వహణ కోసం మాత్రమే ఉపయోగించబడతాయి.",
     safetyLine: "మైత్రి డాక్టర్ కాదు. లక్షణాలు తీవ్రంగా ఉంటే, దయచేసి డాక్టరును సంప్రదించండి లేదా 14416 కు కాల్ చేయండి.", // Telugu text supplied by Ray
+    voiceLangFallback: "Telugu voice input isn't available on this device yet. You can speak in English.", // TODO(Ray): translate
     topics: [
       { emoji: "😴", label: "నిద్ర" },
       { emoji: "🔴", label: "పీరియడ్స్" },
@@ -399,6 +403,7 @@ const LANGS = {
     disclaimer: "میں ایک AI دوست ہوں۔ معلومات اور مدد دیتی ہوں، لیکن غلطی ہو سکتی ہے — طبی معاملات کے لیے ڈاکٹر سے مشورہ کریں۔",
     privacy: "🔒 رازداری: آپ کی گفتگو محفوظ نہیں کی جاتی۔ فون نمبر صرف سیشن مینجمنٹ کے لیے استعمال ہوتے ہیں۔",
     safetyLine: "میتری کوئی ڈاکٹر نہیں ہے۔ اگر علامات شدید ہوں تو براہ کرم ڈاکٹر سے رجوع کریں یا 14416 پر کال کریں۔", // Urdu text supplied by Ray
+    voiceLangFallback: "Urdu voice input isn't available on this device yet. You can speak in English.", // TODO(Ray): translate
     topics: [
       { emoji: "😴", label: "نیند" },
       { emoji: "🔴", label: "پیریڈ" },
@@ -728,8 +733,11 @@ async function startListening() {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const langMap = isIOS
     ? { en: 'en-IN', te: 'en-IN', ur: 'en-IN' }
-    : { en: 'en-IN', te: 'te-IN', ur: 'en-IN' };
+    : sttFallbackToEnglish
+      ? { en: 'en-IN', te: 'en-IN', ur: 'en-IN' }
+      : { en: 'en-IN', te: 'te-IN', ur: 'ur-IN' };
   recognition.lang = langMap[currentLang] || 'en-IN';
+  const sttLang = recognition.lang;
   // Android Chrome ends sessions on its own and repeats growing phrases in continuous mode;
   // one utterance per session lets onend send the turn. Desktop and iOS keep continuous.
   const isAndroid = /android/i.test(navigator.userAgent);
@@ -748,6 +756,7 @@ async function startListening() {
   let micStarted = false;
   let startTimer = null;
   let restartCount = 0;
+  let superseded = false; // set when a fallback recognition replaces this one, so onend must not restart this one
   let emptyLogged = false;
   const logSpeechEmpty = () => { if (emptyLogged) return; emptyLogged = true; logEvent('speech_empty', { greeting_fixed: true }); };
   let safetyTimer = null; // separate from silenceTimer so onend/onresult never clear it by accident
@@ -857,6 +866,15 @@ async function startListening() {
     if (e.error !== 'aborted') logEvent('stt_error', { error_code: sttErrorCode(e.error) });
     if (e.error === 'no-speech') logSpeechEmpty();
     if (e.error === 'not-allowed' || e.error === 'service-not-allowed') reportMicPermission('denied');
+    // This device cannot recognise the selected speech language: fall back to English once per session
+    if (e.error === 'language-not-supported' && sttLang !== 'en-IN' && !sttFallbackToEnglish) {
+      sttFallbackToEnglish = true;
+      superseded = true;
+      logEvent('stt_lang_fallback', { stt_lang: sttLang });
+      showToast(LANGS[currentLang].voiceLangFallback, 5000);
+      setTimeout(startListening, 400);
+      return;
+    }
     // Tell the user what happened. 'aborted' is the app stopping recognition itself, so no toast.
     const errorToast = { 'no-speech': 'noSpeech', 'network': 'errorAPI', 'audio-capture': 'errorMic', 'not-allowed': 'errorMic' }[e.error];
     if (errorToast) showToast(LANGS[currentLang][errorToast]);
@@ -866,6 +884,7 @@ async function startListening() {
 
   recognition.onend = () => {
     if (silenceTimer) clearTimeout(silenceTimer);
+    if (superseded) return;
     // Android ends the session itself after a pause: send what was heard.
     // processUserSpeech sets state to 'thinking' synchronously, so the silence-timer path cannot double-send.
     if (state === 'listening' && accumulatedFinal.trim()) {
