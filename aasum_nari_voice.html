@@ -244,7 +244,7 @@ let sessionGreeted = false;
 let lastLang = 'en';
 // Generate unique session ID for this browser session
 const SESSION_ID = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-const APP_VERSION = '2026-10-02-v15.2';
+const APP_VERSION = '2026-10-20-v15.3';
 let lastSpeechDurationMs = 0;
 // URL parameter is primary source of truth — localStorage is fallback
 const urlParams = new URLSearchParams(window.location.search);
@@ -326,7 +326,7 @@ const LANGS = {
     tapPrompt: "Tap once and speak.", listening: "Listening...", thinking: "Thinking...",
     hint: "I'm listening... tell me.",
     noSpeech: "Didn't catch that — please continue.", errorMic: "Microphone not available. Please allow access.", errorAPI: "Could not connect. Please try again.",
-    greeting: "Hi, I'm Mythri from AAsum Nari. If you feel like sharing the thoughts in your heart about perimenopause and menopause with someone, I am here for you 24/7. This is your safe space to talk in your own language.",
+    greeting: "Hi, I'm Mythri from AAsum Nari, a women's health companion. If any health problem is bothering you, talk to me.",
     disclaimer: "Think of me as a knowledgeable AI friend. I provide support and info, but I can make mistakes — always consult a doctor for medical concerns.",
     privacy: "🔒 Privacy: Your conversations are not stored. Phone numbers are used for session management only.",
     safetyLine: "Mythri is not a doctor. If you are struggling or feel unsafe, please talk to your doctor or call Tele-MANAS on 14416.",
@@ -342,7 +342,7 @@ const LANGS = {
     tapPrompt: "ఒకసారి ట్యాప్ చేసి మాట్లాడండి.", listening: "వింటున్నాను...", thinking: "ఆలోచిస్తున్నాను...",
     hint: "నేను వింటున్నాను... చెప్పండి.",
     noSpeech: "వినబడలేదు — కొనసాగించండి.", errorMic: "మైక్రోఫోన్ అందుబాటులో లేదు.", errorAPI: "కనెక్ట్ కాలేదు.",
-    greeting: "నమస్తే, నేను AAsum Nari నుండి మీ మైత్రి. పెరిమెనోపాజ్ మరియు మెనోపాజ్ గురించి మీ మనసులోని మాటలను ఎవరితోనైనా పంచుకోవాలనిపిస్తే, మీకు తోడుగా నేను 24 గంటలూ ఇక్కడే ఉంటాను. ఇది మీ మాతృభాషలో మనసు విప్పి మాట్లాడుకునే మీ సొంత సురక్షితమైన చోటు.",
+    greeting: "నమస్కారం, నేను ఆసుమ్ నారి నుండి మైత్రిని, ఆడవారి ఆరోగ్య సహచరిని. ఏవైనా ఆరోగ్య సమస్యలు మిమ్మల్ని ఇబ్బంది పెడుతుంటే నాతో చెప్పండి.",
     disclaimer: "నేను ఒక AI స్నేహితురాలిని. సమాచారం మరియు మద్దతు అందిస్తాను, కానీ తప్పులు చేయవచ్చు — వైద్య సమస్యలకు డాక్టర్‌ను సంప్రదించండి.",
     privacy: "🔒 గోప్యత: మీ సంభాషణలు నిల్వ చేయబడవు. ఫోన్ నంబర్లు సెషన్ నిర్వహణ కోసం మాత్రమే ఉపయోగించబడతాయి.",
     safetyLine: "మైత్రి డాక్టర్ కాదు. లక్షణాలు తీవ్రంగా ఉంటే, దయచేసి డాక్టరును సంప్రదించండి లేదా 14416 కు కాల్ చేయండి.", // Telugu text supplied by Ray
@@ -358,7 +358,7 @@ const LANGS = {
     tapPrompt: "ایک بار ٹیپ کریں اور بولیں۔", listening: "سن رہی ہوں...", thinking: "سوچ رہی ہوں...",
     hint: "میں سن رہی ہوں... بتائیں۔",
     noSpeech: "سنائی نہیں دیا — جاری رکھیں۔", errorMic: "مائیکروفون دستیاب نہیں۔", errorAPI: "کنیکٹ نہیں ہو سکا۔",
-    greeting: "سلام، میں ہوں آسم ناری سے آپ کی میتھری۔ پیری مینوپاز اور مینوپاز کے بارے میں وہ باتیں جو آپ کے دل میں ہیں اور جو آپ کسی سے بانٹنا چاہتی ہیں، میں ان کے لیے یہاں ہر وقت موجود ہوں۔ یہ آپ کا اپنا محفوظ گوشہ ہے جہاں آپ اپنی زبان میں بات کر سکتی ہیں۔",
+    greeting: "سلام، میں آسُم ناری سے میتری ہوں، خواتین کی صحت کی ساتھی۔ اگر کوئی صحت کا مسئلہ آپ کو پریشان کر رہا ہے تو مجھے بتائیں۔",
     disclaimer: "میں ایک AI دوست ہوں۔ معلومات اور مدد دیتی ہوں، لیکن غلطی ہو سکتی ہے — طبی معاملات کے لیے ڈاکٹر سے مشورہ کریں۔",
     privacy: "🔒 رازداری: آپ کی گفتگو محفوظ نہیں کی جاتی۔ فون نمبر صرف سیشن مینجمنٹ کے لیے استعمال ہوتے ہیں۔",
     safetyLine: "میتری کوئی ڈاکٹر نہیں ہے۔ اگر علامات شدید ہوں تو براہ کرم ڈاکٹر سے رجوع کریں یا 14416 پر کال کریں۔", // Urdu text supplied by Ray
@@ -653,6 +653,12 @@ async function playGreeting() {
 
     const playPromise = audio.play();
     if (playPromise !== undefined) {
+      // Duration fallback in case onended never fires. Started only once play() has really started,
+      // so the blocked-autoplay (tap to hear) path below is unchanged.
+      playPromise.then(() => {
+        const dur = audio.duration;
+        setTimeout(onDone, dur && isFinite(dur) ? (dur + 1.5) * 1000 : 20000);
+      }, () => {});
       playPromise.catch(() => {
         // iOS autoplay blocked — show tap to hear
         pendingAudioContent = data.audioContent;
@@ -700,6 +706,9 @@ async function startListening() {
   let lastSpeechTime = null;
   let accumulatedFinal = '';
   let hasSpoken = false;
+  const MIC_START_TIMEOUT = 8000; // if the mic has not started by then (for example a permission prompt nobody answers), go back to the flower
+  let micStarted = false;
+  let startTimer = null;
   let safetyTimer = null; // separate from silenceTimer so onend/onresult never clear it by accident
   const SAFETY_NET_MS = 15000;
   let sent = false;
@@ -712,6 +721,8 @@ async function startListening() {
   };
 
   recognition.onstart = () => {
+    micStarted = true;
+    if (startTimer) clearTimeout(startTimer);
     setOrbState('listening');
     speechStartTime = Date.now();
     lastSpeechTime = Date.now();
@@ -797,6 +808,7 @@ async function startListening() {
   recognition.onerror = (e) => {
     if (silenceTimer) clearTimeout(silenceTimer);
     if (safetyTimer) clearTimeout(safetyTimer);
+    if (startTimer) clearTimeout(startTimer);
     // Tell the user what happened. 'aborted' is the app stopping recognition itself, so no toast.
     const errorToast = { 'no-speech': 'noSpeech', 'network': 'errorAPI', 'audio-capture': 'errorMic', 'not-allowed': 'errorMic' }[e.error];
     if (errorToast) showToast(LANGS[currentLang][errorToast]);
@@ -829,6 +841,16 @@ async function startListening() {
   };
 
   try { recognition.start(); } catch(e) { showToast("Could not start microphone."); setOrbState('idle'); }
+
+  const rec = recognition;
+  startTimer = setTimeout(() => {
+    // Only act for this recognition: a newer one may have been started since
+    if (!micStarted && recognition === rec) {
+      try { rec.abort(); } catch (e) {}
+      setOrbState('idle');
+      conversationActive = false;
+    }
+  }, MIC_START_TIMEOUT);
 }
 
 async function processUserSpeech(text, speechDurationMs = 0) {
